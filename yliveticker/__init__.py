@@ -1,4 +1,4 @@
-import yaticker_pb2
+from .yaticker_pb2 import yaticker
 import sys
 import base64
 import websocket
@@ -12,7 +12,7 @@ import asyncio
 import random
 
 
-class YahooFinanceLive:
+class YLiveTicker:
 
     def __init__(self,
                  on_ticker=None,
@@ -30,7 +30,7 @@ class YahooFinanceLive:
         self.on_custom_close = on_close
         self.on_custom_error = on_error
 
-        self.yaticker = yaticker_pb2.yaticker()
+        self.yaticker = yaticker()
 
         self.ticker_names = ticker_names
 
@@ -50,7 +50,7 @@ class YahooFinanceLive:
                     "CgRNU0ZUFT1KMUMY8MzyjcNcKgNOTVMwCDgBRVe55b9IhrLBCmVAXE/A2AEE"]
 
         message_bytes = base64.b64decode(random.choice(messages))
-        yaticker = yaticker_pb2.yaticker()
+        yaticker = yaticker()
         yaticker.ParseFromString(message_bytes)
         return json.dumps({
             "id": yaticker.id,
