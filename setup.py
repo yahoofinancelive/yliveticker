@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="yliveticker",
-    version="0.1",
+    version="0.2.3",
     author="Alexey Paramonov",
     author_email="yliveticker@gmail.com",
     description="Live market data from Yahoo! Finance websocket",
@@ -18,5 +18,6 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    install_requires=['protobuf>=3.11.0', 'websocket-client>=0.57.0'],
     python_requires='>=3.6',
 )
