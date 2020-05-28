@@ -93,7 +93,7 @@ class YLiveTicker:
 
     def on_close(self):
         if self.on_custom_close is None:
-            print("### closed ###")
+            print("### connection is closed ###")
         else:
             self.on_custom_close()
 
@@ -101,3 +101,4 @@ class YLiveTicker:
         def run(*args):
             self.ws.send(json.dumps(self.symbol_list))
         thread.start_new_thread(run, ())
+        print("### connection is open ###")
