@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="yliveticker",
-    version="0.2.3",
+    version="0.2.4",
     author="Alexey Paramonov",
     author_email="yliveticker@gmail.com",
     description="Live market data from Yahoo! Finance websocket",
