@@ -14,6 +14,7 @@ pip install yliveticker
 import yliveticker
 
 
+# this function is called on each ticker update
 def on_new_msg(msg):
     print(msg)
 
