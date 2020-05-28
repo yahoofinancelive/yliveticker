@@ -1,9 +1,15 @@
-# Live from Yahoo Finance:
+# Live from Yahoo Finance
 
 Get market data from Yahoo Finance websocket in near-real time.
 wss://streamer.finance.yahoo.com/
 
-Example:
+## Setup
+```bash
+pip install yliveticker
+```
+[pypi package home](https://pypi.org/project/yliveticker/)
+
+## Example
 ```python
 import yliveticker
 
