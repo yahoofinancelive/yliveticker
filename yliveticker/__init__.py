@@ -8,7 +8,6 @@ except ImportError:
     import _thread as thread
 import time
 import json
-import asyncio
 import random
 
 
