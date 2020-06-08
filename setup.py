@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="yliveticker",
+    name="yliveticker-test",
     version="0.2.5",
     author="Alexey Paramonov",
     author_email="yliveticker@gmail.com",
