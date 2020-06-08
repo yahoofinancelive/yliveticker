@@ -18,7 +18,7 @@ class YLiveTicker:
                  ticker_names=['MSFT'],
                  on_error=None,
                  on_close=None,
-                 enable_socket_trace=False):
+                 enable_socket_trace=False, variable=None):
 
         self.symbol_list = dict()
         self.symbol_list["subscribe"] = ticker_names
@@ -38,7 +38,7 @@ class YLiveTicker:
                                          on_message=self.on_message,
                                          on_error=self.on_error,
                                          on_close=self.on_close)
-        self.ws.on_open = self.on_open
+        self.ws.on_open = self.on_open(variable)
         self.ws.run_forever()
 
     @staticmethod
@@ -96,8 +96,8 @@ class YLiveTicker:
         else:
             self.on_custom_close()
 
-    def on_open(self):
+    def on_open(self, variable):
         def run(*args):
             self.ws.send(json.dumps(self.symbol_list))
-        thread.start_new_thread(run, ())
+        thread.start_new_thread(run, variable)
         print("### connection is open ###")
