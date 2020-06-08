@@ -99,5 +99,5 @@ class YLiveTicker:
     def on_open(self, variable):
         def run(*args):
             self.ws.send(json.dumps(self.symbol_list))
-        thread.start_new_thread(run, variable)
+        thread.start_new_thread(run, (variable))
         print("### connection is open ###")
