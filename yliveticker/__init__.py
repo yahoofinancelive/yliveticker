@@ -43,37 +43,6 @@ class YLiveTicker:
         self.ws.on_open = self.on_open
         self.ws.run_forever()
 
-    @staticmethod
-    def test():
-        messages = [
-            "CgRNU0ZUFT1KMUMY8MzyjcNcKgNOTVMwCDgBRV\
-                e55b9InLTBCmVAXE/A2AEE",
-            "CgRNU0ZUFYVrMUMY0KLMjcNcKgNOTVMwCDgBRZ\
-                +B3L9IuPn8CVU0IjRDXYVrMUNlQApHwNgBBA==",
-            "CgRNU0ZUFR9FMUMYgJ7yjcNcKgNOTVMwCDgBRS\
-                kk579I2IjBCmXAo1DA2AEE",
-            "CgRNU0ZUFT1KMUMY8MzyjcNcKgNOTVMwCDgBRV\
-                e55b9IhrLBCmVAXE/A2AEE",
-        ]
-
-        message_bytes = base64.b64decode(random.choice(messages))
-        ytick = yaticker()
-        ytick.ParseFromString(message_bytes)
-        return json.dumps(
-            {
-                "id": yaticker.id,
-                "exchange": yaticker.exchange,
-                "quoteType": yaticker.quoteType,
-                "price": yaticker.price,
-                "timestamp": yaticker.time,
-                "marketHours": yaticker.marketHours,
-                "changePercent": yaticker.changePercent,
-                "dayVolume": yaticker.dayVolume,
-                "change": yaticker.change,
-                "priceHint": yaticker.priceHint,
-            }
-        )
-
     def on_message(self, message):
         message_bytes = base64.b64decode(message)
         self.yaticker.ParseFromString(message_bytes)

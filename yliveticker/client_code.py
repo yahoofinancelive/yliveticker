@@ -1,4 +1,4 @@
-import yliveticker
+from yliveticker import YLiveTicker
 
 
 def printRes(res):
@@ -9,9 +9,8 @@ def on_close():
     print("bye")
 
 
-print("Test output:", yliveticker.yliveticker.test())
-
-yliveticker.YLiveTicker(
+# Connect to Yahoo! Finance and output live data
+YLiveTicker(
     on_ticker=printRes,
     on_close=on_close,
     ticker_names=[
