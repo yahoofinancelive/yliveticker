@@ -1,3 +1,4 @@
+![](https://github.com/yahoofinancelive/yliveticker/workflows/Python%20package/badge.svg)
 # Live from Yahoo Finance
 
 Get market data from Yahoo Finance websocket in near-real time.
