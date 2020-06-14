@@ -1,0 +1,2 @@
+[flake8]
+exclude = yliveticker/yaticker_pb2.py
