@@ -12,6 +12,9 @@ pip install yliveticker
 [pypi package home](https://pypi.org/project/yliveticker/)
 
 ## Example
+
+The following snippet prints out live metrics in console output. You can follow other symbols by providing them in `ticker_names`.
+
 ```python
 import yliveticker
 
@@ -24,3 +27,6 @@ def on_new_msg(msg):
 yliveticker.YLiveTicker(on_ticker=on_new_msg, ticker_names=[
     "BTC=X", "^GSPC", "^DJI", "^IXIC", "^RUT", "CL=F", "GC=F", "SI=F", "EURUSD=X", "^TNX", "^VIX", "GBPUSD=X", "JPY=X", "BTC-USD", "^CMC200", "^FTSE", "^N225"])
 ```
+
+**Note**
+*Check trading hours for your market if you don't observe any live metrics*
