@@ -45,8 +45,7 @@ class YLiveTicker:
     def on_message(self, message):
         message_bytes = base64.b64decode(message)
         self.yaticker.ParseFromString(message_bytes)
-        data = json.dumps(
-            {
+        data = {
                 "id": self.yaticker.id,
                 "exchange": self.yaticker.exchange,
                 "quoteType": self.yaticker.quoteType,
@@ -56,11 +55,11 @@ class YLiveTicker:
                 "changePercent": self.yaticker.changePercent,
                 "dayVolume": self.yaticker.dayVolume,
                 "change": self.yaticker.change,
-                "priceHint": self.yaticker.priceHint,
+                "priceHint": self.yaticker.priceHint
             }
-        )
+        
         if self.on_ticker is None:
-            print(data)
+            print(json.dumps(data))
         else:
             self.on_ticker(data)
 
