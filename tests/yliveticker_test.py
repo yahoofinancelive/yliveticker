@@ -18,7 +18,7 @@ def test_on_message():
                 "dayVolume": 10460764,
                 "change": -3.1100006103515625,
                 "priceHint": 2,
-            } == json.loads(msg)
+            } == msg
 
         yticker = YLiveTicker(on_ticker=on_msg)
         yticker.on_message(
