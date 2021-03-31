@@ -42,7 +42,7 @@ class YLiveTicker:
         self.ws.on_open = self.on_open
         self.ws.run_forever()
 
-    def on_message(self, message):
+    def on_message(self, ws, message):
         message_bytes = base64.b64decode(message)
         self.yaticker.ParseFromString(message_bytes)
         data = {
@@ -63,19 +63,19 @@ class YLiveTicker:
         else:
             self.on_ticker(data)
 
-    def on_error(self, error):
+    def on_error(self, ws, error):
         if self.on_custom_error is None:
             print(error)
         else:
             self.on_custom_error(error)
 
-    def on_close(self):
+    def on_close(self, ws):
         if self.on_custom_close is None:
             print("### connection is closed ###")
         else:
             self.on_custom_close()
 
-    def on_open(self):
+    def on_open(self, ws):
         def run(*args):
             self.ws.send(json.dumps(self.symbol_list))
 
