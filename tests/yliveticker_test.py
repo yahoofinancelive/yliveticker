@@ -21,7 +21,7 @@ def test_on_message():
             } == msg
 
         yticker = YLiveTicker(on_ticker=on_msg)
-        yticker.on_message(
+        yticker.on_message(None,
             "CgRNU0ZUFYVrMUMY0KLMjcNcKgNOTVMwCDgBRZ\
                 +B3L9IuPn8CVU0IjRDXYVrMUNlQApHwNgBBA=="
         )

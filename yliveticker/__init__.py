@@ -61,7 +61,7 @@ class YLiveTicker:
         if self.on_ticker is None:
             print(json.dumps(data))
         else:
-            self.on_ticker(data)
+            self.on_ticker(ws, data)
 
     def on_error(self, ws, error):
         if self.on_custom_error is None:
