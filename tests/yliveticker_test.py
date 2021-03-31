@@ -6,7 +6,7 @@ from yliveticker import YLiveTicker
 
 def test_on_message():
     with mock.patch("yliveticker.websocket"):
-        def on_msg(msg):
+        def on_msg(ws, msg):
             assert {
                 "id": "MSFT",
                 "exchange": "NMS",
