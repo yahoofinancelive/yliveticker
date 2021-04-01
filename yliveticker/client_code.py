@@ -1,11 +1,11 @@
 from yliveticker import YLiveTicker
 
 
-def printRes(res):
+def printRes(ws, res):
     print(res)
 
 
-def on_close():
+def on_close(ws):
     print("bye")
 
 

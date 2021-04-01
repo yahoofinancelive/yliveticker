@@ -20,7 +20,7 @@ import yliveticker
 
 
 # this function is called on each ticker update
-def on_new_msg(msg):
+def on_new_msg(ws, msg):
     print(msg)
 
 
