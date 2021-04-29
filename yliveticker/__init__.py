@@ -1,5 +1,6 @@
 import base64
 import json
+from .logger import writeline
 
 import websocket
 
@@ -15,7 +16,7 @@ class YLiveTicker:
     def __init__(
         self,
         on_ticker=None,
-        ticker_names=["MSFT"],
+        ticker_names=["AMZN"],
         on_error=None,
         on_close=None,
         enable_socket_trace=False,
@@ -65,13 +66,13 @@ class YLiveTicker:
 
     def on_error(self, ws, error):
         if self.on_custom_error is None:
-            print(error)
+            writeline(error)
         else:
             self.on_custom_error(error)
 
     def on_close(self, ws):
         if self.on_custom_close is None:
-            print("### connection is closed ###")
+            writeline("### connection is closed ###")
         else:
             self.on_custom_close()
 
@@ -80,4 +81,4 @@ class YLiveTicker:
             self.ws.send(json.dumps(self.symbol_list))
 
         thread.start_new_thread(run, ())
-        print("### connection is open ###")
+        writeline("### connection is open ###")
