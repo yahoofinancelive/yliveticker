@@ -1,7 +1,7 @@
 from yliveticker import YLiveTicker
 
 
-def printRes(ws, res):
+def printRes(res):
     print(res)
 
 
