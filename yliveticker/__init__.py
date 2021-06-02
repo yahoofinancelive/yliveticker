@@ -1,6 +1,5 @@
 import base64
 import json
-from .logger import writeline
 
 import websocket
 
@@ -16,7 +15,7 @@ class YLiveTicker:
     def __init__(
         self,
         on_ticker=None,
-        ticker_names=["AMZN"],
+        ticker_names=["MSFT"],
         on_error=None,
         on_close=None,
         enable_socket_trace=False,
@@ -37,13 +36,14 @@ class YLiveTicker:
         self.ws = websocket.WebSocketApp(
             "wss://streamer.finance.yahoo.com/",
             on_message=self.on_message,
+            on_open=self.on_open,
             on_error=self.on_error,
             on_close=self.on_close,
         )
-        self.ws.on_open = self.on_open
+        #self.ws.on_open = self.on_open
         self.ws.run_forever()
 
-    def on_message(self, ws, message):
+    def on_message(self, message):
         message_bytes = base64.b64decode(message)
         self.yaticker.ParseFromString(message_bytes)
         data = {
@@ -62,23 +62,21 @@ class YLiveTicker:
         if self.on_ticker is None:
             print(json.dumps(data))
         else:
-            self.on_ticker(ws, data)
+            self.on_ticker(data)
 
-    def on_error(self, ws, error):
+    def on_error(self, error):
         if self.on_custom_error is None:
-            writeline(error)
+            print(error)
         else:
             self.on_custom_error(error)
 
-    def on_close(self, ws):
+    def on_close(self):
         if self.on_custom_close is None:
-            writeline("### connection is closed ###")
+            print("### connection is closed ###")
         else:
             self.on_custom_close()
 
-    def on_open(self, ws):
-        def run(*args):
-            self.ws.send(json.dumps(self.symbol_list))
+    def on_open(self):
+        self.ws.send(json.dumps(self.symbol_list))
 
-        thread.start_new_thread(run, ())
-        writeline("### connection is open ###")
+        print("### connection is open ###")
