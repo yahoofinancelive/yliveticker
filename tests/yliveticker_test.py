@@ -16,7 +16,10 @@ def test_on_message():
                 "marketHours": 1,
                 "changePercent": -1.7227057218551636,
                 "dayVolume": 10460764,
+                "dayHigh": 180.13360595703125,
+                "dayLow": 177.4199981689453,
                 "change": -3.1100006103515625,
+                "openPrice": 0.0,
                 "priceHint": 2,
             } == msg
 
