@@ -1,2 +1,9 @@
 [flake8]
-exclude = yliveticker/yaticker_pb2.py
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    venv,
+    yliveticker/yaticker_pb2.py
+ignore = E501, E303

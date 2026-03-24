@@ -3,6 +3,7 @@ try:
 except ImportError:
     pd = None
 
+
 class YTimeSeries:
     def __init__(self):
         if pd is None:
@@ -25,7 +26,7 @@ class YTimeSeries:
         """
         if not self.data:
             return pd.DataFrame()
-        
+
         df = pd.DataFrame(self.data)
         if 'timestamp' in df.columns:
             df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
@@ -35,7 +36,7 @@ class YTimeSeries:
     def get_ohlcv(self, interval='1Min'):
         """
         Resamples collected data into OHLCV format.
-        
+
         :param interval: pandas resample interval (e.g., '1Min', '5Min', '1H')
         :return: A dictionary of DataFrames, one per symbol (id)
         """
@@ -46,13 +47,13 @@ class YTimeSeries:
         results = {}
         for symbol, group in df.groupby('id'):
             resampled = group['price'].resample(interval).ohlc()
-            
+
             # Volume might not be always present or might need summation
             if 'dayVolume' in group.columns:
                 # dayVolume is usually cumulative for the day in Yahoo Finance
                 # For true interval volume, we'd need to calculate differences
                 resampled['volume'] = group['dayVolume'].resample(interval).last()
-            
+
             results[symbol] = resampled
-            
+
         return results

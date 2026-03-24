@@ -5,7 +5,8 @@ from .logger import writeline
 import websocket
 
 from .yaticker_pb2 import yaticker
-from .timeseries import YTimeSeries
+from .timeseries import YTimeSeries  # noqa: F401
+
 
 try:
     import thread
@@ -46,28 +47,30 @@ class YLiveTicker:
             on_open=self.on_open,
         )
         self.ws.run_forever(
-            reconnect=reconnect, ping_interval=ping_interval, ping_timeout=ping_timeout
+            reconnect=reconnect,
+            ping_interval=ping_interval,
+            ping_timeout=ping_timeout
         )
 
     def on_message(self, ws, message):
         message_bytes = base64.b64decode(message)
         self.yaticker.ParseFromString(message_bytes)
         data = {
-                "id": self.yaticker.id,
-                "exchange": self.yaticker.exchange,
-                "quoteType": self.yaticker.quoteType,
-                "price": self.yaticker.price,
-                "timestamp": self.yaticker.time,
-                "marketHours": self.yaticker.marketHours,
-                "changePercent": self.yaticker.changePercent,
-                "dayVolume": self.yaticker.dayVolume,
-                "dayHigh": self.yaticker.dayHigh,
-                "dayLow": self.yaticker.dayLow,
-                "change": self.yaticker.change,
-                "openPrice": self.yaticker.openPrice,
-                "priceHint": self.yaticker.priceHint
-            }
-        
+            "id": self.yaticker.id,
+            "exchange": self.yaticker.exchange,
+            "quoteType": self.yaticker.quoteType,
+            "price": self.yaticker.price,
+            "timestamp": self.yaticker.time,
+            "marketHours": self.yaticker.marketHours,
+            "changePercent": self.yaticker.changePercent,
+            "dayVolume": self.yaticker.dayVolume,
+            "dayHigh": self.yaticker.dayHigh,
+            "dayLow": self.yaticker.dayLow,
+            "change": self.yaticker.change,
+            "openPrice": self.yaticker.openPrice,
+            "priceHint": self.yaticker.priceHint
+        }
+
         if self.on_ticker is None:
             print(json.dumps(data))
         else:

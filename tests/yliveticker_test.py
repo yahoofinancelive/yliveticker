@@ -1,4 +1,3 @@
-import json
 from unittest import mock
 
 from yliveticker import YLiveTicker
@@ -24,7 +23,8 @@ def test_on_message():
             } == msg
 
         yticker = YLiveTicker(on_ticker=on_msg)
-        yticker.on_message(None,
-            "CgRNU0ZUFYVrMUMY0KLMjcNcKgNOTVMwCDgBRZ\
-                +B3L9IuPn8CVU0IjRDXYVrMUNlQApHwNgBBA=="
+        yticker.on_message(
+            None,
+            "CgRNU0ZUFYVrMUMY0KLMjcNcKgNOTVMwCDgBRZ"
+            "+B3L9IuPn8CVU0IjRDXYVrMUNlQApHwNgBBA=="
         )
