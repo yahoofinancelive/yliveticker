@@ -5,6 +5,7 @@ from .logger import writeline
 import websocket
 
 from .yaticker_pb2 import yaticker
+from .timeseries import YTimeSeries
 
 try:
     import thread
