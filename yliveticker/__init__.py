@@ -20,6 +20,9 @@ class YLiveTicker:
         on_error=None,
         on_close=None,
         enable_socket_trace=False,
+        reconnect=5,
+        ping_interval=15,
+        ping_timeout=10,
     ):
 
         self.symbol_list = dict()
@@ -39,9 +42,11 @@ class YLiveTicker:
             on_message=self.on_message,
             on_error=self.on_error,
             on_close=self.on_close,
+            on_open=self.on_open,
         )
-        self.ws.on_open = self.on_open
-        self.ws.run_forever()
+        self.ws.run_forever(
+            reconnect=reconnect, ping_interval=ping_interval, ping_timeout=ping_timeout
+        )
 
     def on_message(self, ws, message):
         message_bytes = base64.b64decode(message)
