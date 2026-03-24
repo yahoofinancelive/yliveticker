@@ -61,7 +61,10 @@ class YLiveTicker:
                 "marketHours": self.yaticker.marketHours,
                 "changePercent": self.yaticker.changePercent,
                 "dayVolume": self.yaticker.dayVolume,
+                "dayHigh": self.yaticker.dayHigh,
+                "dayLow": self.yaticker.dayLow,
                 "change": self.yaticker.change,
+                "openPrice": self.yaticker.openPrice,
                 "priceHint": self.yaticker.priceHint
             }
         
