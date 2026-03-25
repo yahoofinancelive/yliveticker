@@ -1,0 +1,22 @@
+name: Bump Homebrew Formula
+
+on:
+  release:
+    types: [published]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  homebrew:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bump Formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          homebrew-tap: yahoofinancelive/homebrew-yliveticker
+          formula-name: yliveticker
+          # The source tarball URL from PyPI
+          download-url: https://pypi.io/packages/source/y/yliveticker/yliveticker-${{ github.event.release.tag_name }}.tar.gz
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

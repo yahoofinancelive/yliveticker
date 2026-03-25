@@ -23,7 +23,14 @@ Get real-time market data from Yahoo! Finance via WebSockets. Lightweight, effic
 pip install yliveticker
 ```
 
-### Full Experience (CLI & Data Analysis)
+### 🍺 Homebrew (macOS/Linux)
+```bash
+brew tap yahoofinancelive/yliveticker
+brew install yliveticker
+```
+
+### 🖥️ Full Experience (CLI & Data Analysis)
+
 To get the interactive dashboard and pandas support:
 ```bash
 pip install yliveticker[cli,pandas]
