@@ -21,7 +21,7 @@ setuptools.setup(
     install_requires=['protobuf>=3.11.0', 'websocket-client>=0.57.0'],
     extras_require={
         'pandas': ['pandas'],
-        'cli': ['rich'],
+        'cli': ['rich', 'prompt_toolkit'],
     },
     entry_points={
         'console_scripts': [

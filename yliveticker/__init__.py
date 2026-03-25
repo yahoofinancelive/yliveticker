@@ -52,6 +52,10 @@ class YLiveTicker:
             ping_timeout=ping_timeout
         )
 
+    def close(self):
+        if self.ws:
+            self.ws.close()
+
     def on_message(self, ws, message):
         message_bytes = base64.b64decode(message)
         self.yaticker.ParseFromString(message_bytes)
