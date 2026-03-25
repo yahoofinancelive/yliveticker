@@ -10,9 +10,10 @@ Get real-time market data from Yahoo! Finance via WebSockets. Lightweight, effic
 ## ✨ Features
 
 - **Real-time updates**: Stream near-instant price changes from Yahoo! Finance.
+- **Interactive Dashboard**: A full-screen terminal UI with live charts and status monitoring.
 - **Robust Connectivity**: Built-in automatic reconnection and keep-alive (heartbeats).
 - **Modern Support**: Fully compatible with Protobuf 4.x/5.x/7.x.
-- **Data Analysis Ready**: Optional pandas integration to generate Time Series and OHLCV candles.
+- **Data Analysis Ready**: Optional pandas integration and background CSV export.
 - **Comprehensive Data**: Includes price, volume, change, day high/low, and more.
 
 ## 🚀 Setup
@@ -23,30 +24,36 @@ pip install yliveticker
 ```
 
 ### 🖥️ Full Experience (CLI & Data Analysis)
-To get the interactive terminal UI and pandas support:
+To get the interactive dashboard and pandas support:
 ```bash
 pip install yliveticker[cli,pandas]
 ```
 
 ## 📖 Usage Examples
 
-### 1. Command Line Interface (CLI)
-The easiest way to watch stocks. It provides a real-time, color-coded dashboard in your terminal.
+### 1. Interactive Dashboard (CLI)
+The easiest way to watch stocks. It provides a real-time, color-coded dashboard with **sparklines** and live status updates.
 
 ```bash
-# Watch multiple symbols
-yliveticker watch AAPL MSFT TSLA BTC-USD
+# Watch multiple symbols and export to CSV
+yliveticker watch AAPL MSFT TSLA BTC-USD --export my_data.csv
 ```
 
 **How it looks:**
 ```text
-Yahoo! Finance Live Ticker
-┏━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
-┃ Symbol  ┃    Price ┃ Day Change       ┃
-┡━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
-│ AAPL    │   234.12 │ +1.45 (0.62%)    │
-│ BTC-USD │ 98450.00 │ -120.50 (-0.12%) │
-└─────────┴━━━━━━━━━━┴━━━━━━━━━━━━━━━━━━┘
+╭──────────────────────────────────────────────────────────────────────────╮
+│                Yahoo! Finance Live Dashboard | 01:50:56                  │
+╰──────────────────────────────────────────────────────────────────────────╯
+┏━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Symbol   ┃     Price ┃ Day Change       ┃ Trend                          ┃
+┡━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ AAPL     │    234.12 │ +1.45 (+0.62%)   │      ▂▃▅▆█                     │
+│ BTC-USD  │  98,450.00 │ -120.50 (-0.12%) │  █▇▆▅▄▃                        │
+│ NVDA     │    177.62 │ +2.42 (+1.38%)   │          █▂                    │
+└──────────┴───────────┴──────────────────┴────────────────────────────────┘
+╭──────────────────────────────────────────────────────────────────────────╮
+│ Status: ● Connected | Updates: 18 | Tickers: 3 | Press Ctrl+C to Quit    │
+╰──────────────────────────────────────────────────────────────────────────╯
 ```
 
 ### 2. Basic Ticker (Blocking)
