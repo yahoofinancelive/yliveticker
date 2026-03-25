@@ -1,5 +1,6 @@
 import argparse
 import sys
+import os
 from . import YLiveTicker
 
 try:
@@ -38,10 +39,10 @@ def run_watch(ticker_names, trace):
     data_store = {ticker: {"price": "---", "change": "---"} for ticker in ticker_names}
 
     def generate_table():
-        table = Table(title="Yahoo! Finance Live Ticker")
+        table = Table()
         table.add_column("Symbol", style="cyan")
         table.add_column("Price", justify="right", style="green")
-        table.add_column("Change", justify="right")
+        table.add_column("Day Change", justify="right")
 
         for symbol, data in data_store.items():
             change = str(data["change"])
@@ -56,20 +57,39 @@ def run_watch(ticker_names, trace):
             "change": f"{msg['change']} ({msg['changePercent']:.2f}%)"
         }
 
-    with Live(generate_table(), refresh_per_second=4) as live:
+    console.print("[bold cyan]Yahoo! Finance Live Ticker[/bold cyan]")
+    with Live(generate_table(), refresh_per_second=4, console=console) as live:
         # We need a custom on_ticker that updates the live display
         def on_ticker_rich(ws, msg):
             on_ticker(ws, msg)
             live.update(generate_table())
 
+        last_error = []
+
+        def on_error_rich(error):
+            last_error.append(error)
+
+        def on_close_rich():
+            pass
+
+        # Temporarily suppress stderr to hide "connection is open" logs
+        original_stderr = sys.stderr
+        sys.stderr = open(os.devnull, 'w')
+
         try:
             YLiveTicker(
                 on_ticker=on_ticker_rich,
+                on_error=on_error_rich,
+                on_close=on_close_rich,
                 ticker_names=ticker_names,
                 enable_socket_trace=trace
             )
         except KeyboardInterrupt:
             pass
+        finally:
+            sys.stderr = original_stderr
+            if last_error:
+                print(f"\nLast error: {last_error[-1]}")
 
 
 if __name__ == "__main__":
