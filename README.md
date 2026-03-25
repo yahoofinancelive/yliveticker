@@ -7,7 +7,7 @@
 
 Get real-time market data from Yahoo! Finance via WebSockets. Lightweight, efficient, and easy to use.
 
-## ✨ Features
+## Features
 
 - **Real-time updates**: Stream near-instant price changes from Yahoo! Finance.
 - **Interactive Dashboard**: A full-screen terminal UI with live charts and status monitoring.
