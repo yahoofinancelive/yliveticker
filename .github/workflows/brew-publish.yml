@@ -11,18 +11,10 @@ jobs:
   homebrew:
     runs-on: ubuntu-latest
     steps:
-      - name: Get version
-        id: get_version
-        run: |
-          TAG=${{ github.event.release.tag_name }}
-          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
-
       - name: Bump Formula
         uses: mislav/bump-homebrew-formula-action@v3
         with:
           homebrew-tap: yahoofinancelive/homebrew-yliveticker
           formula-name: yliveticker
-          # The source tarball URL from PyPI (must not include 'v' prefix)
-          download-url: https://pypi.io/packages/source/y/yliveticker/yliveticker-${{ steps.get_version.outputs.version }}.tar.gz
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
