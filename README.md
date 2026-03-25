@@ -16,20 +16,20 @@ Get real-time market data from Yahoo! Finance via WebSockets. Lightweight, effic
 - **Data Analysis Ready**: Optional pandas integration and background CSV export.
 - **Comprehensive Data**: Includes price, volume, change, day high/low, and more.
 
-## 🚀 Setup
+## Setup
 
 ### Basic Installation
 ```bash
 pip install yliveticker
 ```
 
-### 🖥️ Full Experience (CLI & Data Analysis)
+### Full Experience (CLI & Data Analysis)
 To get the interactive dashboard and pandas support:
 ```bash
 pip install yliveticker[cli,pandas]
 ```
 
-## 📖 Usage Examples
+## Usage Examples
 
 ### 1. Interactive Dashboard (CLI)
 The easiest way to watch stocks. It provides a real-time, color-coded dashboard with **sparklines** and live status updates.
@@ -48,7 +48,7 @@ yliveticker watch AAPL MSFT TSLA BTC-USD --export my_data.csv
 ┃ Symbol   ┃     Price ┃ Day Change       ┃ Trend                          ┃
 ┡━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
 │ AAPL     │    234.12 │ +1.45 (+0.62%)   │      ▂▃▅▆█                     │
-│ BTC-USD  │  98,450.00 │ -120.50 (-0.12%) │  █▇▆▅▄▃                        │
+│ BTC-USD  │  98,450.00│ -120.50 (-0.12%) │  █▇▆▅▄▃                        │
 │ NVDA     │    177.62 │ +2.42 (+1.38%)   │          █▂                    │
 └──────────┴───────────┴──────────────────┴────────────────────────────────┘
 ╭──────────────────────────────────────────────────────────────────────────╮
@@ -116,7 +116,7 @@ for i in range(5):
     time.sleep(1)
 ```
 
-## 🛠 Configuration
+## Configuration
 
 The `YLiveTicker` constructor accepts several parameters for fine-tuning:
 
@@ -129,8 +129,8 @@ The `YLiveTicker` constructor accepts several parameters for fine-tuning:
 | `ping_timeout` | `10` | Timeout in seconds to wait for a pong response. |
 | `enable_socket_trace` | `False` | Set to `True` to see raw WebSocket frames. |
 
-## 📝 Note on Trading Hours
+## Note on Trading Hours
 If you don't observe any live metrics, please check the **trading hours** for your specific market. Many traditional stock symbols will only provide updates during market hours. Crypto symbols (like `BTC-USD`) usually stream 24/7.
 
-## ⚖️ License
+## License
 Distributed under the MIT License. See `LICENSE` for more information.
