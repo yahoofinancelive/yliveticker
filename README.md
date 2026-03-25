@@ -22,15 +22,26 @@ Get real-time market data from Yahoo! Finance via WebSockets. Lightweight, effic
 pip install yliveticker
 ```
 
-### With Pandas Support
-If you want to use the built-in time series collection and OHLCV generation:
+### With CLI and Pandas Support
+To get the full experience with the interactive terminal UI and time series support:
 ```bash
-pip install yliveticker[pandas]
+pip install yliveticker[cli,pandas]
 ```
 
 ## 📖 Usage Examples
 
-### 1. Basic Ticker (Blocking)
+### 1. Command Line Interface (CLI)
+The easiest way to watch stocks without writing any code.
+
+```bash
+# Watch a single ticker
+yliveticker watch BTC-USD
+
+# Watch multiple tickers
+yliveticker watch AAPL MSFT TSLA BTC-USD
+```
+
+### 2. Basic Ticker (Blocking)
 This is the simplest way to print live updates to the console.
 
 ```python

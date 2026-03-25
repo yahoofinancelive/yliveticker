@@ -21,6 +21,12 @@ setuptools.setup(
     install_requires=['protobuf>=3.11.0', 'websocket-client>=0.57.0'],
     extras_require={
         'pandas': ['pandas'],
+        'cli': ['rich'],
+    },
+    entry_points={
+        'console_scripts': [
+            'yliveticker=yliveticker.cli:main',
+        ],
     },
     python_requires='!=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*'
 )
