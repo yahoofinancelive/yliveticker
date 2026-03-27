@@ -22,6 +22,15 @@ setuptools.setup(
     extras_require={
         'pandas': ['pandas'],
         'cli': ['rich', 'prompt_toolkit'],
+        'influxdb': ['influxdb-client'],
+        'timescaledb': ['psycopg2-binary'],
+        'clickhouse': ['clickhouse-connect'],
+        'questdb': ['questdb'],
+        'timestream': ['boto3'],
+        'all': [
+            'pandas', 'rich', 'prompt_toolkit', 'influxdb-client',
+            'psycopg2-binary', 'clickhouse-connect', 'questdb', 'boto3'
+        ],
     },
     entry_points={
         'console_scripts': [

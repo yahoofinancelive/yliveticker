@@ -102,26 +102,43 @@ for symbol, data in ohlcv.items():
     print(data)
 ```
 
-### 3. Non-Blocking Usage (Threading)
-If you want to keep the ticker running in the background while your main script continues.
+### 3. Time Series Database (TSDB) & Grafana
+Store and visualize live ticker data using high-performance time-series databases and Grafana.
 
-```python
-import yliveticker
-import threading
-import time
+#### Installation
+Install the necessary drivers for your chosen database:
+```bash
+# For all supported databases
+pip install yliveticker[all]
 
-def start_ticker():
-    yliveticker.YLiveTicker(ticker_names=["BTC-USD"])
-
-# Start the ticker in a separate thread
-t = threading.Thread(target=start_ticker, daemon=True)
-t.start()
-
-# Do other things in your main script
-for i in range(5):
-    print(f"Main thread is doing work... {i}")
-    time.sleep(1)
+# Or individually
+pip install yliveticker[influxdb]
+pip install yliveticker[timescaledb]
+pip install yliveticker[clickhouse]
+pip install yliveticker[questdb]
+pip install yliveticker[timestream]
 ```
+
+#### Supported Sinks
+- **InfluxDB**: Native Flux support with tag/field mapping.
+- **TimescaleDB**: Automated hypertable creation and bulk inserts.
+- **ClickHouse**: High-throughput columnar storage.
+- **QuestDB**: Ultra-fast ingestion via InfluxDB Line Protocol (ILP).
+- **Amazon Timestream**: AWS-native serverless time-series database.
+
+#### Quick Start with Docker & Grafana
+We provide a pre-configured environment with InfluxDB and Grafana.
+
+1. **Start the stack**:
+   ```bash
+   cd docker
+   docker-compose up -d
+   ```
+2. **Run the example script**:
+   ```bash
+   python examples/tsdb_example.py
+   ```
+3. **Visualize**: Open `http://localhost:3000` (User: `admin`, Pass: `admin`) to see the live "Yahoo Finance Live Ticker" dashboard.
 
 ## Configuration
 
