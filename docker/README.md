@@ -185,6 +185,7 @@ queries the default `ticker_data` bucket.
 | Dashboard hard to find | Open `http://localhost:3000/d/yliveticker-dashboard` or **Dashboards → yliveticker**. Existing personal home preferences can override the configured home page. |
 | Old Price/Volume page, `-- Grafana --`, or `e.replace is not a function` | Pull this branch and rerun `up --build -d`, then the readiness script. The upgrade replaces the legacy dashboard without requiring `down -v`. |
 | Grafana exits with “data source not found” | Pull this branch and rebuild. Its provisioning migrates the earlier generated datasource UID. Keep your volumes. |
+| `up -d` stops after creating collector/Grafana | Check `docker compose -f docker/docker-compose.yml ps -a` and the InfluxDB logs. This branch uses InfluxDB 2.9.1 so volumes previously opened by the old `influxdb:latest` remain compatible. |
 | Readiness check times out | Inspect `ps`, `logs influxdb grafana collector`, and the collector health check below. Do not assume a running container has written data. |
 | Only old/demo symbols | Select the desired symbols, then refresh the dashboard or widen the time range. |
 | InfluxDB unhealthy / unauthorized | Check token consistency and whether an existing volume was initialized with different credentials. |

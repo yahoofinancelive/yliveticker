@@ -16,7 +16,8 @@
 - Default the Docker quickstart to clearly labeled synthetic data; check recent
   InfluxDB writes for collector health and make the ticker dashboard the home page.
   Migrate Grafana databases with the legacy provisioned dashboard and datasource
-  UIDs without deleting ticks.
+  UIDs without deleting ticks. Pin InfluxDB 2.9.1 so volumes created by the old
+  `influxdb:latest` remain schema-compatible.
 - Update the README, configuration guide, screenshot and integration checks.
 - Require `websocket-client>=1.6.0` and Python 3.7 or newer for the connection API.
 

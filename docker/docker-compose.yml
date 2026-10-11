@@ -1,7 +1,9 @@
 services:
   influxdb:
     # Flux queries and the Python sink require InfluxDB 2, not InfluxDB 3.
-    image: influxdb:2.7
+    # Main previously used `latest`, which migrated existing volumes to 2.9;
+    # keep that metadata compatible instead of silently downgrading to 2.7.
+    image: influxdb:2.9.1
     ports:
       - "127.0.0.1:8086:8086"
     environment:
