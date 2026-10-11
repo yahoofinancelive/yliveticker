@@ -128,7 +128,8 @@ yliveticker.YLiveTicker(
 
 Ticks contain `id`, `price`, `timestamp`, `exchange`, `quoteType`, `marketHours`,
 `changePercent`, `dayVolume`, `dayHigh`, `dayLow`, `change`, `openPrice` and
-`priceHint`. `timestamp` is Yahoo's Unix timestamp in **milliseconds**.
+`priceHint`, plus `currency` when Yahoo supplies it. `timestamp` is Yahoo's Unix
+timestamp in **milliseconds**.
 `dayVolume` is cumulative session volume; prices use each symbol's quote currency.
 Availability and update frequency vary by instrument and market.
 

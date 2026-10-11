@@ -58,6 +58,12 @@ def verify_once():
     assert "${volume_symbol:text}" in volume_panel["description"]
     assert price_panel["title"] == "${symbol:raw}: price"
     assert volume_panel["title"].startswith("${volume_symbol:raw}:")
+    assert price_panel["fieldConfig"]["defaults"]["displayName"].endswith(
+        "${__field.labels.id} · ${__field.labels.currency}"
+    )
+    assert volume_panel["fieldConfig"]["defaults"]["displayName"].endswith(
+        "${__field.labels.id} · ${__field.labels.currency}"
+    )
     assert age_panel["type"] == "table"
     assert age_panel["gridPos"] == {"h": 8, "w": 24, "x": 0, "y": 15}
     assert "sort(columns: [\"Symbol\"])" in age_panel["targets"][0]["query"]
@@ -114,6 +120,11 @@ def verify_once():
                       if field["type"] == "number"]
             assert fields and all(field.get("labels", {}).get("id", "").startswith("SYNTH-")
                                   for field in fields), (title, fields)
+            assert all(field.get("labels", {}).get("currency") not in (None, "", "N/A")
+                       for field in fields), (title, fields)
+            assert any(field.get("labels", {}).get("id") == "SYNTH-BTC-USD"
+                       and field.get("labels", {}).get("currency") == "USD"
+                       for field in fields), (title, fields)
         print("PASS:", title)
 
 

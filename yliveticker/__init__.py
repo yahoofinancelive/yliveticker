@@ -229,6 +229,8 @@ class YLiveTicker:
             "openPrice": decoded.openPrice,
             "priceHint": decoded.priceHint,
         }
+        if decoded.currency:
+            data["currency"] = decoded.currency
         if self.on_ticker is None:
             print(json.dumps(data))
         else:

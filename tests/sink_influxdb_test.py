@@ -16,6 +16,7 @@ class TestInfluxDBSink(unittest.TestCase):
         # Sample ticker message
         msg = {
             'id': 'AAPL',
+            'currency': 'USD',
             'price': 150.0,
             'dayVolume': 1000000,
             'timestamp': 1600000000000, # 2020-09-13 12:26:40 UTC
@@ -36,6 +37,7 @@ class TestInfluxDBSink(unittest.TestCase):
         point = next(point for point in sent_points if point._name == "ticker")
         self.assertEqual(point._name, "ticker")
         self.assertEqual(point._tags['id'], "AAPL")
+        self.assertEqual(point._tags['currency'], "USD")
         self.assertEqual(point._fields['price'], 150.0)
         self.assertEqual(point._fields['volume'], 1000000.0)
         self.assertEqual(point._fields['volume_available'], 1)
@@ -68,6 +70,24 @@ class TestInfluxDBSink(unittest.TestCase):
         self.assertEqual(point._fields['price'], 1.16)
         self.assertEqual(point._fields['volume_available'], 0)
         self.assertNotIn('volume', point._fields)
+
+    @patch('influxdb_client.InfluxDBClient')
+    def test_missing_currency_does_not_create_an_empty_tag(self, MockClient):
+        mock_write_api = MockClient.return_value.write_api.return_value
+        sink = InfluxDBSink(url="http://localhost:8086", token="token", org="org", bucket="bucket")
+
+        sink.write_batch([{
+            'id': 'UNKNOWN',
+            'currency': '',
+            'price': 10,
+            'dayVolume': 1,
+            'timestamp': 1600000000000,
+            '_received_at_ns': 1600000000123456789,
+        }])
+
+        point = next(point for point in mock_write_api.write.call_args.kwargs['record']
+                     if point._name == "ticker")
+        self.assertNotIn('currency', point._tags)
 
 if __name__ == '__main__':
     unittest.main()

@@ -18,6 +18,8 @@
   Use an east-to-west default watchlist spanning thirteen equity markets, crypto,
   FX and commodities; reserve `SYNTH-*` names for deterministic CI data. Use a
   one-hour dashboard range so delayed exchange quotes remain discoverable.
+  Preserve Yahoo quote currency in callbacks and InfluxDB, and show it in every
+  price and volume chart legend with fallbacks for pre-upgrade stored ticks.
   Migrate Grafana databases with the legacy provisioned dashboard and datasource
   UIDs without deleting ticks. Pin InfluxDB 2.9.1 so volumes created by the old
   `influxdb:latest` remain schema-compatible.

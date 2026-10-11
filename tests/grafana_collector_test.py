@@ -97,6 +97,7 @@ def test_synthetic_feed_is_explicitly_labeled_and_uses_yahoo_tick_fields():
             collector.stream_synthetic(sink, ["BTC-USD"])
     tick = sink.on_ticker.call_args.args[1]
     assert tick["id"] == "SYNTH-BTC-USD"
+    assert tick["currency"] == "USD"
     assert tick["price"] > 0
     assert tick["timestamp"] > 0
     assert tick["dayVolume"] >= 0

@@ -22,10 +22,13 @@ class InfluxDBSink(BaseTSDBSink):
     def write_batch(self, batch):
         points = []
         for msg in batch:
-            point = influxdb_client.Point("ticker") \
-                .tag("id", msg.get('id')) \
-                .field("price", float(msg.get('price'))) \
-                .time(datetime.fromtimestamp(msg.get('timestamp') / 1000, tz=timezone.utc))
+            point = influxdb_client.Point("ticker").tag("id", msg.get('id'))
+            currency = msg.get('currency')
+            if currency:
+                point.tag("currency", currency)
+            point.field("price", float(msg.get('price'))).time(
+                datetime.fromtimestamp(msg.get('timestamp') / 1000, tz=timezone.utc)
+            )
             # proto3 scalar fields have no presence information here, so Yahoo's
             # missing dayVolume arrives as 0. Preserve availability explicitly
             # without storing that sentinel as a measured session volume.

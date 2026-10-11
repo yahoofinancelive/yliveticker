@@ -76,6 +76,7 @@ def main():
                 if ("Synthetic test feed" in body
                         and "SYNTH-BTC-USD: price" in body
                         and "SYNTH-BTC-USD: reported session volume (cumulative)" in body
+                        and "SYNTH-BTC-USD · USD" in body
                         and "NVDA · United States: price" in body
                         and "Received ticks/min (last 60s)" in body
                         and "Received ticks per minute" in body
@@ -85,6 +86,14 @@ def main():
                 if time.monotonic() >= deadline:
                     raise AssertionError("Dashboard did not populate automatically:\n" + body)
                 page.wait_for_timeout(1000)
+            for title in (
+                "SYNTH-BTC-USD: price",
+                "SYNTH-BTC-USD: reported session volume (cumulative)",
+            ):
+                panel = page.get_by_role("region").filter(
+                    has=page.get_by_role("heading", name=title),
+                )
+                assert "SYNTH-BTC-USD · USD" in panel.inner_text(), panel.inner_text()
             page.mouse.wheel(0, -10000)
             page.wait_for_timeout(500)
             age_table = page.get_by_role("region").filter(

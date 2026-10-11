@@ -35,6 +35,26 @@ DEFAULT_SYMBOLS = (
     "VALE3.SA",   # Brazil
 )
 
+SYNTHETIC_CURRENCIES = {
+    "BTC-USD": "USD",
+    "EURUSD=X": "USD",
+    "GC=F": "USD",
+    "FPH.NZ": "NZD",
+    "BHP.AX": "AUD",
+    "7203.T": "JPY",
+    "0700.HK": "HKD",
+    "D05.SI": "SGD",
+    "RELIANCE.NS": "INR",
+    "EMAAR.AE": "AED",
+    "NPN.JO": "ZAc",
+    "SAP.DE": "EUR",
+    "HSBA.L": "GBp",
+    "AAPL": "USD",
+    "NVDA": "USD",
+    "SHOP.TO": "CAD",
+    "VALE3.SA": "BRL",
+}
+
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
@@ -113,6 +133,7 @@ def stream_synthetic(sink, symbols):
             base_price = (index + 1) * 100.0
             sink.on_ticker(None, {
                 "id": "SYNTH-" + symbol,
+                "currency": SYNTHETIC_CURRENCIES.get(symbol, "N/A"),
                 "price": base_price + math.sin(step / 10.0 + index) * base_price * 0.01,
                 "dayVolume": 10000 + step * 100,
                 "timestamp": timestamp,

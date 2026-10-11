@@ -47,13 +47,15 @@ The dashboard provides:
 - A full-width, scrollable table of last-tick ages.
 - A symbol selector and separate price charts for each selected symbol. Every
   default ticker gets a panel, so closed or silent markets show **No data**
-  instead of disappearing.
+  instead of disappearing. Price and volume legends append the instrument's
+  Yahoo quote-currency code (for example, `AAPL · USD` and `7203.T · JPY`).
 - Positive **cumulative session volume** (`dayVolume`), not interval/candle
   volume. Yahoo's missing/unsupported volume arrives as zero for some assets;
   the quickstart treats it as unavailable and omits those volume panels.
 - Five-second refresh and browser-local chart timestamps, with UTC selectable
   in Grafana's time picker. Prices remain in each symbol's quote currency; they
-  are not converted into a common currency.
+  are not converted into a common currency. A currency shown on a volume legend
+  is context for the instrument; cumulative volume itself remains a unit count.
 
 ## Choose symbols
 
