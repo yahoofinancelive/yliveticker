@@ -2,7 +2,7 @@
   "id": null,
   "uid": "yliveticker-dashboard",
   "title": "yliveticker · Yahoo Finance",
-  "description": "Live Yahoo Finance ticks from a global watchlist are stored in InfluxDB 2 (ticker_data). SYNTH-* prices appear only in the explicit synthetic test feed.",
+  "description": "Live Yahoo Finance ticks from an east-to-west global watchlist are stored in InfluxDB 2 (ticker_data). SYNTH-* prices appear only in the explicit synthetic test feed.",
   "tags": [
     "yliveticker",
     "yahoo-finance",
@@ -10,7 +10,7 @@
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 4,
+  "version": 5,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
@@ -31,7 +31,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Live Yahoo Finance feed · global watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.** `BTC-USD` · `EURUSD=X` · `GC=F` · `AAPL` · `SHOP.TO` · `VALE3.SA` · `SAP.DE` · `HSBA.L` · `NPN.JO` · `RELIANCE.NS` · `0700.HK` · `7203.T` · `BHP.AX`\n\nClosed markets begin populating in their next sessions. Select symbols above; charts refresh every 5 seconds. `SYNTH-*` is reserved for the explicit CI pipeline test. [Watchlist and troubleshooting](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.** `BTC-USD` · `EURUSD=X` · `GC=F` · `FPH.NZ` · `BHP.AX` · `7203.T` · `0700.HK` · `D05.SI` · `RELIANCE.NS` · `EMAAR.AE` · `NPN.JO` · `SAP.DE` · `HSBA.L` · `AAPL` · `NVDA` · `SHOP.TO` · `VALE3.SA`\n\nWeekday exchange handoff; BTC is 24/7. Closed markets populate next session. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },

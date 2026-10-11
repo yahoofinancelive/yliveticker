@@ -49,20 +49,26 @@ The default watchlist is geographically and asset-class diverse:
 | Market | Yahoo symbol | Instrument |
 | --- | --- | --- |
 | Global | `BTC-USD`, `EURUSD=X`, `GC=F` | Bitcoin, EUR/USD, gold futures |
-| United States | `AAPL` | Apple |
+| New Zealand | `FPH.NZ` | Fisher & Paykel Healthcare |
+| Australia | `BHP.AX` | BHP |
+| Japan | `7203.T` | Toyota |
+| Hong Kong | `0700.HK` | Tencent |
+| Singapore | `D05.SI` | DBS Group |
+| India | `RELIANCE.NS` | Reliance Industries |
+| Dubai | `EMAAR.AE` | Emaar Properties |
+| South Africa | `NPN.JO` | Naspers |
+| Germany (Xetra/Frankfurt) | `SAP.DE` | SAP |
+| United Kingdom | `HSBA.L` | HSBC |
+| United States | `AAPL`, `NVDA` | Apple; NVIDIA (California issuer) |
 | Canada | `SHOP.TO` | Shopify |
 | Brazil | `VALE3.SA` | Vale |
-| Germany | `SAP.DE` | SAP |
-| United Kingdom | `HSBA.L` | HSBC |
-| South Africa | `NPN.JO` | Naspers |
-| India | `RELIANCE.NS` | Reliance Industries |
-| Hong Kong | `0700.HK` | Tencent |
-| Japan | `7203.T` | Toyota |
-| Australia | `BHP.AX` | BHP |
 
-These are real Yahoo instruments, not bundled sample records. Only instruments
-whose markets are active will produce new ticks; `BTC-USD` keeps the readiness
-check useful around the clock.
+These are real Yahoo instruments, not bundled sample records. Ordered from
+Auckland westward, their regular sessions provide broad weekday coverage, but
+they are not a guaranteed continuous feed: holidays, closed markets and Yahoo
+availability still apply. A West Coast company still trades on the US market
+schedule. `BTC-USD` supplies true 24/7 ticks; FX and gold futures bridge most of
+the weekday gaps.
 
 On macOS/Linux, from the repository root:
 

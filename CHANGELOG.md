@@ -15,8 +15,8 @@
   opt-in clearly labeled synthetic mode, readiness checks and collector shutdown flushing.
 - Default the Docker quickstart to live Yahoo quotes; check recent mode-specific
   InfluxDB writes for collector health and make the ticker dashboard the home page.
-  Use a geographically diverse default watchlist spanning ten equity markets,
-  crypto, FX and commodities; reserve `SYNTH-*` names for deterministic CI data.
+  Use an east-to-west default watchlist spanning thirteen equity markets, crypto,
+  FX and commodities; reserve `SYNTH-*` names for deterministic CI data.
   Migrate Grafana databases with the legacy provisioned dashboard and datasource
   UIDs without deleting ticks. Pin InfluxDB 2.9.1 so volumes created by the old
   `influxdb:latest` remain schema-compatible.

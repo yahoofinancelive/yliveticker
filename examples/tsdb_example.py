@@ -19,16 +19,20 @@ DEFAULT_SYMBOLS = (
     "BTC-USD",    # Global crypto (keeps the quickstart active around the clock)
     "EURUSD=X",   # Global foreign exchange
     "GC=F",       # Gold futures
+    "FPH.NZ",     # New Zealand
+    "BHP.AX",     # Australia
+    "7203.T",     # Japan
+    "0700.HK",    # Hong Kong
+    "D05.SI",     # Singapore
+    "RELIANCE.NS",  # India
+    "EMAAR.AE",   # Dubai
+    "NPN.JO",     # South Africa
+    "SAP.DE",     # Germany (Xetra/Frankfurt)
+    "HSBA.L",     # United Kingdom
     "AAPL",       # United States
+    "NVDA",       # California issuer (trades on the US market schedule)
     "SHOP.TO",    # Canada
     "VALE3.SA",   # Brazil
-    "SAP.DE",     # Germany
-    "HSBA.L",     # United Kingdom
-    "NPN.JO",     # South Africa
-    "RELIANCE.NS",  # India
-    "0700.HK",    # Hong Kong
-    "7203.T",     # Japan
-    "BHP.AX",     # Australia
 )
 
 

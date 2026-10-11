@@ -31,10 +31,11 @@ The collector writes to **InfluxDB 2, bucket `ticker_data`**; Grafana reads thos
 stored ticks through the provisioned InfluxDB datasource.
 
 **The default uses live Yahoo quotes** through the package's real WebSocket
-client. Its global watchlist covers `AAPL` (US), `SHOP.TO` (Canada), `VALE3.SA`
-(Brazil), `SAP.DE` (Germany), `HSBA.L` (UK), `NPN.JO` (South Africa),
-`RELIANCE.NS` (India), `0700.HK` (Hong Kong), `7203.T` (Japan), and `BHP.AX`
-(Australia), plus `BTC-USD`, `EURUSD=X`, and gold futures (`GC=F`). The dashboard
+client. Its east-to-west watchlist covers New Zealand (`FPH.NZ`), Australia
+(`BHP.AX`), Japan (`7203.T`), Hong Kong (`0700.HK`), Singapore (`D05.SI`), India
+(`RELIANCE.NS`), Dubai (`EMAAR.AE`), South Africa (`NPN.JO`), Frankfurt/Xetra
+(`SAP.DE`), London (`HSBA.L`), and the Americas (`AAPL`, `NVDA`, `SHOP.TO`,
+`VALE3.SA`), plus `BTC-USD`, `EURUSD=X`, and gold futures (`GC=F`). The dashboard
 shows the active feed, stored tick count, latest prices, tick freshness, separate
 charts and cumulative volume.
 The readiness script checks that a recent live tick actually reached InfluxDB
@@ -55,8 +56,9 @@ market hours. Put `TICKER_SYNTHETIC=1` in `docker/.env` only for pipeline testin
 
 ![Grafana dashboard showing global live prices, tick freshness and per-symbol charts](docs/images/grafana-dashboard.png)
 
-*The default quickstart connects to Yahoo. Closed exchanges will begin populating
-when their next trading sessions open.*
+*The default quickstart connects to Yahoo. The exchange sequence gives broad
+weekday coverage, while BTC supplies true 24/7 ticks. Closed exchanges begin
+populating when their next trading sessions open.*
 
 **[Quickstart settings, synthetic test feed and troubleshooting →](docker/README.md)**
 

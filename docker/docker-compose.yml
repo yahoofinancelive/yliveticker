@@ -35,8 +35,8 @@ services:
     environment:
       INFLUX_URL: http://influxdb:8086
       INFLUX_TOKEN: ${INFLUX_TOKEN:-my-super-secret-auth-token}
-      # Global live watchlist: crypto, FX, commodities and ten equity markets.
-      TICKER_SYMBOLS: ${TICKER_SYMBOLS:-BTC-USD EURUSD=X GC=F AAPL SHOP.TO VALE3.SA SAP.DE HSBA.L NPN.JO RELIANCE.NS 0700.HK 7203.T BHP.AX}
+      # Global live watchlist: 24/7 crypto plus a weekday east-to-west market handoff.
+      TICKER_SYMBOLS: ${TICKER_SYMBOLS:-BTC-USD EURUSD=X GC=F FPH.NZ BHP.AX 7203.T 0700.HK D05.SI RELIANCE.NS EMAAR.AE NPN.JO SAP.DE HSBA.L AAPL NVDA SHOP.TO VALE3.SA}
       # Exercise the real package path by default; the synthetic test feed is opt-in.
       TICKER_SYNTHETIC: ${TICKER_SYNTHETIC:-0}
       TICKER_MAX_CONNECTIONS: ${TICKER_MAX_CONNECTIONS:-4}
