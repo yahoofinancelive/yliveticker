@@ -71,12 +71,14 @@ python -m pip install yliveticker
 python -m pip install 'yliveticker[cli,pandas]'
 ```
 
-Homebrew (macOS/Linux):
+Homebrew via the project’s [third-party tap](https://github.com/yahoofinancelive/homebrew-yliveticker) (macOS/Linux):
 
 ```bash
 brew tap yahoofinancelive/yliveticker
-brew install yliveticker
+brew install yahoofinancelive/yliveticker/yliveticker
 ```
+
+This formula is maintained in the project’s tap and is not listed in `homebrew/core`.
 
 ## Terminal dashboard
 
