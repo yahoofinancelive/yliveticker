@@ -1,4 +1,4 @@
-"""Stream Yahoo ticks into InfluxDB, or generate explicitly labeled demo data."""
+"""Stream Yahoo ticks into InfluxDB, or generate a synthetic test feed."""
 
 import argparse
 import json
@@ -15,17 +15,34 @@ from yliveticker.sinks.influxdb import InfluxDBSink
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SYMBOLS = (
+    "BTC-USD",    # Global crypto (keeps the quickstart active around the clock)
+    "EURUSD=X",   # Global foreign exchange
+    "GC=F",       # Gold futures
+    "AAPL",       # United States
+    "SHOP.TO",    # Canada
+    "VALE3.SA",   # Brazil
+    "SAP.DE",     # Germany
+    "HSBA.L",     # United Kingdom
+    "NPN.JO",     # South Africa
+    "RELIANCE.NS",  # India
+    "0700.HK",    # Hong Kong
+    "7203.T",     # Japan
+    "BHP.AX",     # Australia
+)
+
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "symbols", nargs="*",
-        default=os.getenv("TICKER_SYMBOLS", "BTC-USD ETH-USD AAPL").split(),
-        help="Yahoo symbols (default: TICKER_SYMBOLS or BTC-USD ETH-USD AAPL)",
+        default=os.getenv("TICKER_SYMBOLS", " ".join(DEFAULT_SYMBOLS)).split(),
+        help="Yahoo symbols (default: TICKER_SYMBOLS or the global quickstart watchlist)",
     )
     parser.add_argument(
-        "--demo", action="store_true", default=os.getenv("TICKER_DEMO", "0") == "1",
-        help="Generate synthetic DEMO-* symbols instead of connecting to Yahoo",
+        "--synthetic", action="store_true",
+        default=os.getenv("TICKER_SYNTHETIC", "0") == "1",
+        help="Generate clearly labeled SYNTH-* test symbols instead of connecting to Yahoo",
     )
     parser.add_argument(
         "--max-connections", type=int, default=os.getenv("TICKER_MAX_CONNECTIONS", "4"),
@@ -43,9 +60,9 @@ def parse_args(argv=None):
     return args
 
 
-def check_ticks(url, token, org, bucket, symbols, demo):
+def check_ticks(url, token, org, bucket, symbols, synthetic):
     """Verify storage, mode and freshness, without creating another collector."""
-    ids = ["DEMO-" + symbol if demo else symbol for symbol in symbols]
+    ids = ["SYNTH-" + symbol if synthetic else symbol for symbol in symbols]
     query = (
         "from(bucket: " + json.dumps(bucket) + ")\n"
         "  |> range(start: -30s)\n"
@@ -57,10 +74,10 @@ def check_ticks(url, token, org, bucket, symbols, demo):
         tables = client.query_api().query(query)
         if any(table.records for table in tables):
             logger.info("Recent %s ticks verified in InfluxDB bucket %s",
-                        "demo" if demo else "live", bucket)
+                        "synthetic" if synthetic else "live", bucket)
             return 0
     logger.error("No recent %s ticks in InfluxDB for %s; check collector logs",
-                 "demo" if demo else "live", ", ".join(ids))
+                 "synthetic" if synthetic else "live", ", ".join(ids))
     return 1
 
 
@@ -83,15 +100,15 @@ def wait_for_influxdb(url, token, org, bucket, timeout=90):
             time.sleep(2)
 
 
-def stream_demo(sink, symbols):
-    logger.warning("DEMO MODE: synthetic data only; symbols are prefixed DEMO-")
+def stream_synthetic(sink, symbols):
+    logger.warning("SYNTHETIC TEST FEED: not market data; symbols are prefixed SYNTH-")
     step = 0
     while True:
         timestamp = int(time.time() * 1000)
         for index, symbol in enumerate(symbols):
             base_price = (index + 1) * 100.0
             sink.on_ticker(None, {
-                "id": "DEMO-" + symbol,
+                "id": "SYNTH-" + symbol,
                 "price": base_price + math.sin(step / 10.0 + index) * base_price * 0.01,
                 "dayVolume": 10000 + step * 100,
                 "timestamp": timestamp,
@@ -110,7 +127,7 @@ def main(argv=None):
 
     if args.check:
         try:
-            return check_ticks(url, token, org, bucket, args.symbols, args.demo)
+            return check_ticks(url, token, org, bucket, args.symbols, args.synthetic)
         except Exception as exc:
             logger.error("InfluxDB tick check failed: %s", exc)
             return 1
@@ -124,8 +141,8 @@ def main(argv=None):
     try:
         wait_for_influxdb(url, token, org, bucket)
         sink = InfluxDBSink(url=url, token=token, org=org, bucket=bucket, flush_interval=1.0)
-        if args.demo:
-            stream_demo(sink, args.symbols)
+        if args.synthetic:
+            stream_synthetic(sink, args.symbols)
         else:
             logger.info("Streaming %s into %s; press Ctrl+C to stop", ", ".join(args.symbols), bucket)
             YLiveTicker(on_ticker=sink.on_ticker, ticker_names=args.symbols,

@@ -14,7 +14,7 @@ def main():
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--start-collector", action="store_true")
-    parser.add_argument("--screenshot", default="junit/grafana-demo.png")
+    parser.add_argument("--screenshot", default="junit/grafana-dashboard.png")
     args = parser.parse_args()
     url = os.getenv("GRAFANA_URL", "http://localhost:3000")
     with sync_playwright() as playwright:
@@ -53,15 +53,15 @@ def main():
             deadline = time.monotonic() + 90
             while True:
                 body = page.locator("body").inner_text()
-                if ("Synthetic demo" in body
-                        and "DEMO-BTC-USD: price" in body
-                        and "DEMO-BTC-USD: session volume (cumulative)" in body
+                if ("Synthetic test feed" in body
+                        and "SYNTH-BTC-USD: price" in body
+                        and "SYNTH-BTC-USD: session volume (cumulative)" in body
                         and "No data" not in body and "Waiting for ticks" not in body):
                     break
                 if time.monotonic() >= deadline:
                     raise AssertionError("Dashboard did not populate automatically:\n" + body)
                 page.wait_for_timeout(1000)
-            print("PASS: InfluxDB demo data populated automatically:", page.url, flush=True)
+            print("PASS: InfluxDB synthetic test data populated automatically:", page.url, flush=True)
 
         assert queries, "Browser did not issue datasource queries"
         assert all(query.get("datasource", {}).get("uid") == "yliveticker-influxdb"

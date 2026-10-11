@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     env:
-      TICKER_DEMO: '1'
+      TICKER_SYNTHETIC: '1'
       COMPOSE_PROJECT_NAME: yliveticker-smoke
     steps:
       - uses: actions/checkout@v4
@@ -50,8 +50,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: grafana-demo
-          path: junit/grafana-demo.png
+          name: grafana-dashboard
+          path: junit/grafana-dashboard.png
       - name: Show service logs
         if: always()
         run: docker compose -f docker/docker-compose.yml logs --no-color

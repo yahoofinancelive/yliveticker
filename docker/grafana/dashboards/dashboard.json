@@ -2,7 +2,7 @@
   "id": null,
   "uid": "yliveticker-dashboard",
   "title": "yliveticker · Yahoo Finance",
-  "description": "Live Yahoo Finance ticks are stored in InfluxDB 2 (ticker_data). DEMO-* prices appear only in explicit synthetic mode.",
+  "description": "Live Yahoo Finance ticks from a global watchlist are stored in InfluxDB 2 (ticker_data). SYNTH-* prices appear only in the explicit synthetic test feed.",
   "tags": [
     "yliveticker",
     "yahoo-finance",
@@ -10,7 +10,7 @@
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 3,
+  "version": 4,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
@@ -31,7 +31,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**The default collector streams live Yahoo Finance ticks into [InfluxDB](http://localhost:8086) · bucket `ticker_data`.** **`DEMO-*` symbols appear only when synthetic mode is explicitly enabled.** Select symbols above; charts refresh every 5 seconds.\n\nCharts empty? Allow startup to finish. Closed markets or an unavailable Yahoo feed can leave charts empty. [Quickstart and troubleshooting](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**Live Yahoo Finance feed · global watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.** `BTC-USD` · `EURUSD=X` · `GC=F` · `AAPL` · `SHOP.TO` · `VALE3.SA` · `SAP.DE` · `HSBA.L` · `NPN.JO` · `RELIANCE.NS` · `0700.HK` · `7203.T` · `BHP.AX`\n\nClosed markets begin populating in their next sessions. Select symbols above; charts refresh every 5 seconds. `SYNTH-*` is reserved for the explicit CI pipeline test. [Watchlist and troubleshooting](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },
@@ -60,7 +60,7 @@
               "type": "value",
               "options": {
                 "1": {
-                  "text": "Synthetic demo",
+                  "text": "Synthetic test feed",
                   "color": "orange",
                   "index": 0
                 },
@@ -94,7 +94,7 @@
             "type": "influxdb",
             "uid": "yliveticker-influxdb"
           },
-          "query": "from(bucket: \"ticker_data\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({r with _value: if r.id =~ /^DEMO-/ then 1 else 0}))"
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({r with _value: if r.id =~ /^SYNTH-/ then 1 else 0}))"
         }
       ]
     },

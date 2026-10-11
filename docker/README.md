@@ -13,11 +13,11 @@ docker compose -f docker/docker-compose.yml up --build -d
 sh docker/wait-for-stack.sh
 ```
 
-**Default mode is the live Yahoo feed.** The collector subscribes to `BTC-USD`,
-`ETH-USD` and `AAPL` through `yliveticker`, writes received ticks to **InfluxDB 2,
-bucket `ticker_data`**, and Grafana queries that bucket. The readiness script waits
-for a recent live tick in storage and Grafana readiness; a timeout reports a
-startup or upstream-feed failure.
+**Default mode is the live Yahoo feed.** The collector uses a global watchlist
+through `yliveticker`, writes received ticks to **InfluxDB 2, bucket
+`ticker_data`**, and Grafana queries that bucket. The readiness script waits for a
+recent live tick in storage and Grafana readiness; a timeout reports a startup or
+upstream-feed failure.
 It uses container health checks and works with older Compose v2 versions
 without the `--wait` flag. Set `QUICKSTART_TIMEOUT=300` when a longer wait is needed.
 The first build downloads images and Python dependencies.
@@ -31,7 +31,7 @@ uses the displayed time range; the feed status and tick count update even before
 symbol discovery completes.
 
 The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
-`TICKER_DEMO=1` has no effect there. Use the PR branch to try this quickstart.
+`TICKER_SYNTHETIC=1` has no effect there. Use the PR branch to try this quickstart.
 
 The dashboard provides:
 
@@ -43,6 +43,26 @@ The dashboard provides:
   currency; they are not converted into a common currency.
 
 ## Choose symbols
+
+The default watchlist is geographically and asset-class diverse:
+
+| Market | Yahoo symbol | Instrument |
+| --- | --- | --- |
+| Global | `BTC-USD`, `EURUSD=X`, `GC=F` | Bitcoin, EUR/USD, gold futures |
+| United States | `AAPL` | Apple |
+| Canada | `SHOP.TO` | Shopify |
+| Brazil | `VALE3.SA` | Vale |
+| Germany | `SAP.DE` | SAP |
+| United Kingdom | `HSBA.L` | HSBC |
+| South Africa | `NPN.JO` | Naspers |
+| India | `RELIANCE.NS` | Reliance Industries |
+| Hong Kong | `0700.HK` | Tencent |
+| Japan | `7203.T` | Toyota |
+| Australia | `BHP.AX` | BHP |
+
+These are real Yahoo instruments, not bundled sample records. Only instruments
+whose markets are active will produce new ticks; `BTC-USD` keeps the readiness
+check useful around the clock.
 
 On macOS/Linux, from the repository root:
 
@@ -68,7 +88,7 @@ collector accepts the same environment setting or `--max-connections 6`.
 The 100-symbol boundary was observed in live tests of Yahoo's unofficial feed;
 pooling cannot guarantee updates for an inactive instrument or closed market.
 
-## Live and demo modes
+## Live feed and synthetic pipeline test
 
 The plain command connects to Yahoo. Yahoo's unofficial feed can be delayed or
 unavailable, and closed markets can be silent. Crypto usually updates outside
@@ -77,22 +97,22 @@ a tick within the last 30 seconds; an unhealthy collector can mean the upstream
 feed is silent, even if the process is running.
 
 To test the complete pipeline deterministically without relying on Yahoo or
-market hours, explicitly enable demo mode:
+market hours, explicitly enable the synthetic test feed:
 
 ```bash
-TICKER_DEMO=1 docker compose -f docker/docker-compose.yml up --build -d
+TICKER_SYNTHETIC=1 docker compose -f docker/docker-compose.yml up --build -d
 sh docker/wait-for-stack.sh
 ```
 
-The collector logs **DEMO MODE** and emits synthetic prices under `DEMO-*`
-symbols. Both modes use the same InfluxDB sink and bucket. Grafana's volume
+The collector logs **SYNTHETIC TEST FEED** and emits non-market test prices under
+`SYNTH-*` symbols. Both modes use the same InfluxDB sink and bucket. Grafana's volume
 stores dashboard settings; market ticks are stored in the InfluxDB volume.
 
-Put `TICKER_DEMO=0` or `TICKER_DEMO=1` in `docker/.env` to keep your choice between
-commands. A prefix such as `TICKER_DEMO=0` applies to just that invocation;
+Put `TICKER_SYNTHETIC=0` or `TICKER_SYNTHETIC=1` in `docker/.env` to keep your choice between
+commands. A prefix such as `TICKER_SYNTHETIC=0` applies to just that invocation;
 running a plain command afterwards uses `.env` or the default live mode.
 Stored series remain visible within the selected time range. Select live or
-`DEMO-*` symbols explicitly when switching modes.
+`SYNTH-*` symbols explicitly when switching modes.
 
 ## Upgrade an existing quickstart
 
@@ -126,7 +146,7 @@ docker compose -f docker/docker-compose.yml down -v
 SIGINT/SIGTERM stops the collector and flushes buffered ticks. The example uses
 one-second batches. Compose allows 30 seconds for pooled connections to close
 and the sink to flush before forcing termination. The existing sink logs write
-failures and does not replay failed batches; this demo is not a durable market-data queue.
+failures and does not replay failed batches; this quickstart is not a durable market-data queue.
 
 ## Local settings
 
@@ -148,7 +168,7 @@ Initialization values only apply to a new InfluxDB volume; changing `.env`
 after setup does not rotate its existing credentials. Likewise Grafana's admin
 password environment setting initializes a new Grafana database. Preserve your
 data and change existing credentials in the relevant service, or use the
-explicit destructive reset above to initialize a fresh demo.
+explicit destructive reset above to initialize a fresh quickstart.
 
 This stack intentionally stays on InfluxDB **2.x** because the sink and
 queries use its API and Flux. Do not change the image to `influxdb:latest` or
@@ -168,7 +188,7 @@ python examples/tsdb_example.py BTC-USD AAPL
 
 If the full stack was already running, stop its collector first with
 `docker compose -f docker/docker-compose.yml stop collector` to avoid duplicate
-writers. The example also accepts `--demo`. Host-side configuration uses
+writers. The example also accepts `--synthetic`. Host-side configuration uses
 `INFLUX_URL`, `INFLUX_TOKEN`, `INFLUX_ORG` and `INFLUX_BUCKET`; pass any custom
 credentials from `.env` to the host process yourself. The supplied dashboard
 queries the default `ticker_data` bucket.
@@ -177,13 +197,13 @@ queries the default `ticker_data` bucket.
 
 | Symptom | Check |
 | --- | --- |
-| Empty charts | Confirm this branch has a `collector` service: `docker compose -f docker/docker-compose.yml config --services`. Check `ps` and collector logs. Demo mode should show `DEMO-*` ticks; allow the first build to finish. |
+| Empty charts | Confirm this branch has a `collector` service: `docker compose -f docker/docker-compose.yml config --services`. Check `ps` and collector logs. The synthetic test feed should show `SYNTH-*` ticks; allow the first build to finish. |
 | Dashboard hard to find | Open `http://localhost:3000/d/yliveticker-dashboard` or **Dashboards → yliveticker**. Existing personal home preferences can override the configured home page. |
 | Old Price/Volume page, `-- Grafana --`, or `e.replace is not a function` | Pull this branch and rerun `up --build -d`, then the readiness script. The upgrade replaces the legacy dashboard without requiring `down -v`. |
 | Grafana exits with “data source not found” | Pull this branch and rebuild. Its provisioning migrates the earlier generated datasource UID. Keep your volumes. |
 | `up -d` stops after creating collector/Grafana | Check `docker compose -f docker/docker-compose.yml ps -a` and the InfluxDB logs. This branch uses InfluxDB 2.9.1 so volumes previously opened by the old `influxdb:latest` remain compatible. |
 | Readiness check times out | Inspect `ps`, `logs influxdb grafana collector`, and the collector health check below. Do not assume a running container has written data. |
-| Only old/demo symbols | Select the desired symbols, then refresh the dashboard or widen the time range. |
+| Only old/synthetic symbols | Select the desired symbols, then refresh the dashboard or widen the time range. |
 | InfluxDB unhealthy / unauthorized | Check token consistency and whether an existing volume was initialized with different credentials. |
 | Port already in use | Stop the conflicting local service or change the host-side port in Compose. |
 | `unknown flag: --wait` | Omit `--wait` and `--wait-timeout`: run `up --build -d`, followed by `sh docker/wait-for-stack.sh`. |
@@ -196,7 +216,7 @@ then starts the actual Compose stack with synthetic data and verifies the upgrad
 recent InfluxDB writes, home page,
 project-name search, symbol discovery and every dashboard panel query. It also
 checks a fresh browser opened before the first tick arrives.
-To run the same check locally, after starting demo mode:
+To run the same check locally, after starting the synthetic test feed:
 
 ```bash
 docker compose -f docker/docker-compose.yml exec collector python examples/tsdb_example.py --check

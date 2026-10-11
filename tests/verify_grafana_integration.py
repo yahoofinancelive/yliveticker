@@ -1,4 +1,4 @@
-"""Check the running demo stack through Grafana's actual datasource and panels.
+"""Check the running quickstart through Grafana's actual datasource and panels.
 
 Run manually or in the Compose smoke workflow; no third-party modules required.
 """
@@ -53,7 +53,7 @@ def verify_once():
             queries.append((panel["title"], target["query"]))
     for title, query in queries:
         # Check the stored panel queries, including Flux compilation via Grafana.
-        query = query.replace("${symbol:regex}", "DEMO-.*")
+        query = query.replace("${symbol:regex}", "SYNTH-.*")
         now = int(time.time() * 1000)
         result = grafana_request("/api/ds/query", {
             "from": str(now - 900000), "to": str(now),
@@ -65,11 +65,11 @@ def verify_once():
         assert not result.get("error"), (title, result)
         frames = result.get("frames", [])
         assert frames and any(any(values) for frame in frames for values in frame["data"]["values"]), (
-            title, "No data returned; run the collector with TICKER_DEMO=1",
+            title, "No data returned; run the collector with TICKER_SYNTHETIC=1",
         )
         if title == "Symbols":
             values = [value for frame in frames for column in frame["data"]["values"] for value in column]
-            assert any(isinstance(value, str) and value.startswith("DEMO-") for value in values), values
+            assert any(isinstance(value, str) and value.startswith("SYNTH-") for value in values), values
         elif title == "Active feed (last 30 seconds)":
             values = [value for frame in frames for column in frame["data"]["values"] for value in column]
             assert 1 in values, values
@@ -79,7 +79,7 @@ def verify_once():
         else:
             fields = [field for frame in frames for field in frame["schema"]["fields"]
                       if field["type"] == "number"]
-            assert fields and all(field.get("labels", {}).get("id", "").startswith("DEMO-")
+            assert fields and all(field.get("labels", {}).get("id", "").startswith("SYNTH-")
                                   for field in fields), (title, fields)
         print("PASS:", title)
 

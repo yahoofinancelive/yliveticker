@@ -14,20 +14,23 @@ spec.loader.exec_module(collector)
 
 
 def test_compose_and_collector_default_to_live(monkeypatch):
-    monkeypatch.delenv("TICKER_DEMO", raising=False)
-    assert not collector.parse_args([]).demo
+    monkeypatch.delenv("TICKER_SYNTHETIC", raising=False)
+    args = collector.parse_args([])
+    assert not args.synthetic
+    assert args.symbols == list(collector.DEFAULT_SYMBOLS)
     compose = (Path(__file__).parents[1] / "docker" / "docker-compose.yml").read_text()
-    assert "TICKER_DEMO: ${TICKER_DEMO:-0}" in compose
+    assert "TICKER_SYNTHETIC: ${TICKER_SYNTHETIC:-0}" in compose
+    assert "TICKER_SYMBOLS: ${TICKER_SYMBOLS:-" + " ".join(collector.DEFAULT_SYMBOLS) + "}" in compose
 
 
 def test_symbol_arguments_override_environment(monkeypatch):
     monkeypatch.setenv("TICKER_SYMBOLS", "BTC-USD ETH-USD")
-    monkeypatch.setenv("TICKER_DEMO", "0")
+    monkeypatch.setenv("TICKER_SYNTHETIC", "0")
     assert collector.parse_args([]).symbols == ["BTC-USD", "ETH-USD"]
     assert collector.parse_args(["AAPL"]).symbols == ["AAPL"]
-    assert collector.parse_args(["--demo"]).demo
-    monkeypatch.setenv("TICKER_DEMO", "1")
-    assert collector.parse_args([]).demo
+    assert collector.parse_args(["--synthetic"]).synthetic
+    monkeypatch.setenv("TICKER_SYNTHETIC", "1")
+    assert collector.parse_args([]).synthetic
 
 
 def test_collector_pool_limit_is_configurable(monkeypatch):
@@ -39,7 +42,7 @@ def test_collector_pool_limit_is_configurable(monkeypatch):
 
 
 def test_live_collector_passes_pool_limit_to_client(monkeypatch):
-    monkeypatch.setenv("TICKER_DEMO", "0")
+    monkeypatch.setenv("TICKER_SYNTHETIC", "0")
     with patch.object(collector, "wait_for_influxdb"), \
             patch.object(collector, "InfluxDBSink"), \
             patch.object(collector, "YLiveTicker") as client, \
@@ -64,17 +67,17 @@ def test_readiness_timeout_reports_configuration_problem():
             collector.wait_for_influxdb("url", "token", "org", "bucket", timeout=0)
 
 
-@pytest.mark.parametrize("demo", [False, True])
+@pytest.mark.parametrize("synthetic", [False, True])
 @pytest.mark.parametrize("failure", [KeyboardInterrupt, RuntimeError])
-def test_stop_flushes_sink_when_stream_ends(demo, failure, monkeypatch):
-    monkeypatch.setenv("TICKER_DEMO", "0")
+def test_stop_flushes_sink_when_stream_ends(synthetic, failure, monkeypatch):
+    monkeypatch.setenv("TICKER_SYNTHETIC", "0")
     sink = MagicMock()
     with patch.object(collector, "wait_for_influxdb"), \
             patch.object(collector, "InfluxDBSink", return_value=sink), \
             patch.object(collector, "YLiveTicker", side_effect=failure), \
-            patch.object(collector, "stream_demo", side_effect=failure), \
+            patch.object(collector, "stream_synthetic", side_effect=failure), \
             patch.object(collector.signal, "signal") as handler:
-        args = ["--demo", "BTC-USD"] if demo else ["BTC-USD"]
+        args = ["--synthetic", "BTC-USD"] if synthetic else ["BTC-USD"]
         if failure is RuntimeError:
             with pytest.raises(RuntimeError):
                 collector.main(args)
@@ -85,37 +88,37 @@ def test_stop_flushes_sink_when_stream_ends(demo, failure, monkeypatch):
         assert handler.call_count == 2
 
 
-def test_demo_is_explicitly_labeled_and_uses_yahoo_tick_fields():
+def test_synthetic_feed_is_explicitly_labeled_and_uses_yahoo_tick_fields():
     sink = MagicMock()
     with patch.object(collector.time, "sleep", side_effect=KeyboardInterrupt):
         with pytest.raises(KeyboardInterrupt):
-            collector.stream_demo(sink, ["BTC-USD"])
+            collector.stream_synthetic(sink, ["BTC-USD"])
     tick = sink.on_ticker.call_args.args[1]
-    assert tick["id"] == "DEMO-BTC-USD"
+    assert tick["id"] == "SYNTH-BTC-USD"
     assert tick["price"] > 0
     assert tick["timestamp"] > 0
     assert tick["dayVolume"] >= 0
 
 
-@pytest.mark.parametrize("demo, expected", [(True, "DEMO-BTC-USD"), (False, "BTC-USD")])
-def test_tick_check_requires_recent_records_in_the_configured_mode(demo, expected):
+@pytest.mark.parametrize("synthetic, expected", [(True, "SYNTH-BTC-USD"), (False, "BTC-USD")])
+def test_tick_check_requires_recent_records_in_the_configured_mode(synthetic, expected):
     with patch.object(collector, "InfluxDBClient") as client_type:
         query_api = client_type.return_value.__enter__.return_value.query_api.return_value
         query_api.query.return_value = []
-        assert collector.check_ticks("url", "token", "org", "bucket", ["BTC-USD"], demo) == 1
+        assert collector.check_ticks("url", "token", "org", "bucket", ["BTC-USD"], synthetic) == 1
         query = query_api.query.call_args.args[0]
         assert "range(start: -30s)" in query
         assert 'set: ["' + expected + '"]' in query
         table = MagicMock()
         table.records = [object()]
         query_api.query.return_value = [table]
-        assert collector.check_ticks("url", "token", "org", "bucket", ["BTC-USD"], demo) == 0
+        assert collector.check_ticks("url", "token", "org", "bucket", ["BTC-USD"], synthetic) == 0
 
 
 def test_check_failure_exits_without_starting_a_collector():
     with patch.object(collector, "check_ticks", side_effect=RuntimeError("Unauthorized")), \
             patch.object(collector, "InfluxDBSink") as sink, \
             patch.object(collector, "YLiveTicker") as client:
-        assert collector.main(["--check", "--demo"]) == 1
+        assert collector.main(["--check", "--synthetic"]) == 1
         sink.assert_not_called()
         client.assert_not_called()

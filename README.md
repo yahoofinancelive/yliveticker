@@ -15,7 +15,7 @@ With [Docker Desktop or Docker Engine and Compose v2](https://docs.docker.com/co
 
 **Before [PR #22](https://github.com/yahoofinancelive/yliveticker/pull/22) merges,
 check out `feat/pooling-and-grafana` before running Compose.** The older `main`
-Compose file does not start a collector and ignores `TICKER_DEMO`.
+Compose file does not start a collector and ignores `TICKER_SYNTHETIC`.
 
 ```bash
 git clone https://github.com/yahoofinancelive/yliveticker.git
@@ -30,9 +30,13 @@ It is also listed under **Dashboards → yliveticker**, with a
 The collector writes to **InfluxDB 2, bucket `ticker_data`**; Grafana reads those
 stored ticks through the provisioned InfluxDB datasource.
 
-**The default uses live Yahoo quotes** for `BTC-USD`, `ETH-USD` and `AAPL` through
-the package's real WebSocket client. The dashboard shows the active feed, stored
-tick count, latest prices, tick freshness, separate charts and cumulative volume.
+**The default uses live Yahoo quotes** through the package's real WebSocket
+client. Its global watchlist covers `AAPL` (US), `SHOP.TO` (Canada), `VALE3.SA`
+(Brazil), `SAP.DE` (Germany), `HSBA.L` (UK), `NPN.JO` (South Africa),
+`RELIANCE.NS` (India), `0700.HK` (Hong Kong), `7203.T` (Japan), and `BHP.AX`
+(Australia), plus `BTC-USD`, `EURUSD=X`, and gold futures (`GC=F`). The dashboard
+shows the active feed, stored tick count, latest prices, tick freshness, separate
+charts and cumulative volume.
 The readiness script checks that a recent live tick actually reached InfluxDB
 before reporting success. It also works with Compose versions that do not support
 `--wait`.
@@ -40,21 +44,21 @@ before reporting success. It also works with Compose versions that do not suppor
 For a deterministic offline/CI check, explicitly enable synthetic data:
 
 ```bash
-TICKER_DEMO=1 docker compose -f docker/docker-compose.yml up --build -d
+TICKER_SYNTHETIC=1 docker compose -f docker/docker-compose.yml up --build -d
 sh docker/wait-for-stack.sh
 ```
 
-Synthetic symbols are visibly prefixed `DEMO-` and never presented as market
+Synthetic test symbols are visibly prefixed `SYNTH-` and never presented as market
 quotes. Yahoo's unofficial feed can be unavailable, and closed markets can be
-silent; the default crypto symbols normally continue updating outside equity
-market hours. Put `TICKER_DEMO=1` in `docker/.env` only when you want demo mode.
+silent; the default crypto symbol normally continues updating outside equity
+market hours. Put `TICKER_SYNTHETIC=1` in `docker/.env` only for pipeline testing.
 
-![Grafana dashboard showing latest prices, tick freshness and per-symbol charts](docs/images/grafana-demo.png)
+![Grafana dashboard showing global live prices, tick freshness and per-symbol charts](docs/images/grafana-dashboard.png)
 
-*Dashboard layout shown with the explicit deterministic mode used by CI. The
-default quickstart connects to Yahoo; `DEMO-*` series are never live quotes.*
+*The default quickstart connects to Yahoo. Closed exchanges will begin populating
+when their next trading sessions open.*
 
-**[Quickstart settings, demo mode and troubleshooting →](docker/README.md)**
+**[Quickstart settings, synthetic test feed and troubleshooting →](docker/README.md)**
 
 ## Choose your workflow
 
@@ -221,7 +225,7 @@ python examples/tsdb_example.py BTC-USD AAPL
 
 Stop any existing Docker collector first to avoid duplicate writers. The
 [example](examples/tsdb_example.py) accepts symbols, environment-based InfluxDB
-settings and `--demo`, waits for database readiness and flushes on shutdown.
+settings and `--synthetic`, waits for database readiness and flushes on shutdown.
 See the [quickstart guide](docker/README.md) for credentials and lifecycle commands.
 
 Sinks batch writes in memory. Failed batches are logged, without durable replay;
