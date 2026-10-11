@@ -1,7 +1,10 @@
 apiVersion: 1
 
 providers:
-  - name: yliveticker
+  # Grafana uses this internal name to associate files with rows in its
+  # database. Keep the original provider identity so existing quickstarts can
+  # replace the old two-panel dashboard instead of stranding it.
+  - name: Default
     orgId: 1
     folder: yliveticker
     type: file

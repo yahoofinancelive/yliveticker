@@ -8,7 +8,6 @@ import argparse
 import json
 import os
 import time
-from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -33,7 +32,10 @@ def verify_once():
     assert datasource["type"] == "influxdb", "InfluxDB datasource is not provisioned"
     health = grafana_request("/api/datasources/uid/yliveticker-influxdb/health")
     assert health["status"] == "OK", health
-    dashboard = grafana_request("/api/dashboards/uid/yliveticker-dashboard")["dashboard"]
+    response = grafana_request("/api/dashboards/uid/yliveticker-dashboard")
+    dashboard = response["dashboard"]
+    assert dashboard["title"] == "yliveticker · Yahoo Finance", dashboard["title"]
+    assert response["meta"]["provisioned"], "Ticker dashboard is not file-provisioned"
     assert dashboard["refresh"] == "5s"
     assert dashboard["templating"]["list"][0]["includeAll"]
     assert dashboard["annotations"]["list"] == [], "No internal Grafana datasource is needed"
@@ -82,8 +84,8 @@ def verify_once():
         print("PASS:", title)
 
 
-def seed_legacy():
-    """Simulate an older installation whose datasource has a generated UID."""
+def verify_legacy():
+    """Confirm CI started the exact dashboard/provisioning layout being upgraded."""
     deadline = time.monotonic() + 120
     while True:
         try:
@@ -93,26 +95,24 @@ def seed_legacy():
             if time.monotonic() >= deadline:
                 raise
             time.sleep(2)
-    result = grafana_request("/api/datasources", {
-        "name": "InfluxDB", "type": "influxdb", "access": "proxy",
-        "url": "http://influxdb:8086", "isDefault": True,
-        "jsonData": {"version": "Flux", "organization": "yliveticker", "defaultBucket": "ticker_data"},
-        "secureJsonData": {"token": os.getenv("INFLUX_TOKEN", "my-super-secret-auth-token")},
-    })
-    legacy_uid = result["datasource"]["uid"]
+    datasources = grafana_request("/api/datasources")
+    legacy = next(item for item in datasources if item["name"] == "InfluxDB")
+    legacy_uid = legacy["uid"]
     assert legacy_uid != "yliveticker-influxdb"
-    path = Path(__file__).parents[1] / "docker/grafana/dashboards/dashboard.json"
-    model = json.loads(path.read_text().replace("yliveticker-influxdb", legacy_uid))
-    grafana_request("/api/dashboards/db", {"dashboard": model, "overwrite": True})
-    grafana_request("/api/org/preferences", {"homeDashboardUID": model["uid"]}, method="PUT")
-    print("PASS: created legacy Grafana database with generated datasource UID", legacy_uid)
+    response = grafana_request("/api/dashboards/uid/yliveticker-dashboard")
+    dashboard = response["dashboard"]
+    assert dashboard["title"] == "Yahoo Finance Live Ticker"
+    assert [panel["title"] for panel in dashboard["panels"]] == ["Price", "Volume"]
+    assert all(panel["datasource"]["uid"] == "InfluxDB" for panel in dashboard["panels"])
+    assert response["meta"]["provisioned"], "Legacy dashboard must carry provisioning metadata"
+    print("PASS: exact legacy provisioned dashboard and generated datasource are present", legacy_uid)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--seed-legacy", action="store_true")
-    if parser.parse_args().seed_legacy:
-        seed_legacy()
+    parser.add_argument("--verify-legacy", action="store_true")
+    if parser.parse_args().verify_legacy:
+        verify_legacy()
         return
     deadline = time.monotonic() + 120
     while True:

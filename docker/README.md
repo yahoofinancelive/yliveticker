@@ -103,9 +103,11 @@ Stored series remain visible within the selected time range. Select live or
 Pull the current PR branch, rerun `up --build -d`, then run
 `sh docker/wait-for-stack.sh`.
 Provisioning replaces the old Grafana `InfluxDB` datasource with a stable UID,
-updates the dashboard, and keeps stored InfluxDB ticks. This fixes the
-`Datasource provisioning error: data source not found` failure on existing
-Grafana databases. Dashboard files live under `/etc/grafana/dashboards` separately
+replaces the legacy Price/Volume dashboard under the same permanent URL, and
+keeps stored InfluxDB ticks. This fixes blank legacy charts, the panel editor's
+`e.replace is not a function` error, and existing Grafana databases that fail
+with `Datasource provisioning error: data source not found`. Dashboard files
+live under `/etc/grafana/dashboards` separately
 from Grafana's database and are polled every 30 seconds, including on macOS.
 **No volume deletion is required for this upgrade.**
 
@@ -181,7 +183,7 @@ queries the default `ticker_data` bucket.
 | --- | --- |
 | Empty charts | Confirm this branch has a `collector` service: `docker compose -f docker/docker-compose.yml config --services`. Check `ps` and collector logs. Demo mode should show `DEMO-*` ticks; allow the first build to finish. |
 | Dashboard hard to find | Open `http://localhost:3000/d/yliveticker-dashboard` or **Dashboards → yliveticker**. Existing personal home preferences can override the configured home page. |
-| Internal Grafana datasource shown | Open the ticker dashboard; its data panels use `yliveticker-influxdb`. The older dashboard's built-in annotations used `-- Grafana --`; those annotations have been removed. |
+| Old Price/Volume page, `-- Grafana --`, or `e.replace is not a function` | Pull this branch and rerun `up --build -d`, then the readiness script. The upgrade replaces the legacy dashboard without requiring `down -v`. |
 | Grafana exits with “data source not found” | Pull this branch and rebuild. Its provisioning migrates the earlier generated datasource UID. Keep your volumes. |
 | Readiness check times out | Inspect `ps`, `logs influxdb grafana collector`, and the collector health check below. Do not assume a running container has written data. |
 | Only old/demo symbols | Select the desired symbols, then refresh the dashboard or widen the time range. |
@@ -192,8 +194,9 @@ queries the default `ticker_data` bucket.
 
 ## Integration check
 
-CI seeds an older Grafana database, then starts the actual Compose stack with
-synthetic data and verifies the upgrade, recent InfluxDB writes, home page,
+CI seeds the exact old file-provisioned Price/Volume dashboard and datasource,
+then starts the actual Compose stack with synthetic data and verifies the upgrade,
+recent InfluxDB writes, home page,
 project-name search, symbol discovery and every dashboard panel query. It also
 checks a fresh browser opened before the first tick arrives.
 To run the same check locally, after starting demo mode:
