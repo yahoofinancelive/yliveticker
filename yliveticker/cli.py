@@ -20,7 +20,8 @@ except ImportError:
 
 
 class Dashboard:
-    def __init__(self, tickers, export_file=None):
+    def __init__(self, tickers, export_file=None, symbols_per_connection=100,
+                 max_connections=4):
         self.tickers = list(tickers)
         self.data = {
             t: {"price": 0.0, "change": 0.0, "percent": 0.0, "history": deque(maxlen=20)}
@@ -33,6 +34,9 @@ class Dashboard:
         self.lock = threading.Lock()
         self.yt = None
         self.stop_event = threading.Event()
+        self.fatal_error = None
+        self.symbols_per_connection = symbols_per_connection
+        self.max_connections = max_connections
 
     def on_ticker(self, ws, msg):
         with self.lock:
@@ -133,11 +137,24 @@ class Dashboard:
                     on_error=self.on_error,
                     on_close=self.on_close,
                     ticker_names=current_tickers,
-                    enable_socket_trace=trace
+                    enable_socket_trace=trace,
+                    symbols_per_connection=self.symbols_per_connection,
+                    max_connections=self.max_connections,
+                    start=False,
                 )
+                if self.stop_event.is_set():
+                    self.yt.close()
+                    return
+                self.yt.run()
+                return
+            except ValueError as e:
+                self.fatal_error = e
+                self.on_error(str(e))
+                self.stop_event.set()
+                return
             except Exception as e:
                 self.on_error(str(e))
-                time.sleep(2)
+                self.stop_event.wait(2)
 
     def stop(self):
         self.stop_event.set()
@@ -145,16 +162,20 @@ class Dashboard:
             self.yt.close()
 
 
-def run_watch(ticker_names, trace, export_file):
+def run_watch(ticker_names, trace, export_file, symbols_per_connection=100,
+              max_connections=4):
     if Console is None:
         print("Rich not installed. Basic mode.")
-        YLiveTicker(ticker_names=ticker_names, enable_socket_trace=trace)
+        YLiveTicker(ticker_names=ticker_names, enable_socket_trace=trace,
+                    symbols_per_connection=symbols_per_connection,
+                    max_connections=max_connections)
         return
 
-    dashboard = Dashboard(ticker_names, export_file)
+    dashboard = Dashboard(ticker_names, export_file, symbols_per_connection, max_connections)
 
     original_stderr = sys.stderr
-    sys.stderr = open(os.devnull, 'w')
+    quiet_stderr = open(os.devnull, 'w')
+    sys.stderr = quiet_stderr
 
     ws_thread = threading.Thread(target=dashboard.run_ws, args=(trace,), daemon=True)
     ws_thread.start()
@@ -168,7 +189,11 @@ def run_watch(ticker_names, trace, export_file):
         pass
     finally:
         dashboard.stop()
+        ws_thread.join(timeout=5)
         sys.stderr = original_stderr
+        quiet_stderr.close()
+    if dashboard.fatal_error is not None:
+        raise dashboard.fatal_error
 
 
 def main():
@@ -178,9 +203,15 @@ def main():
     watch_parser.add_argument("tickers", nargs="+")
     watch_parser.add_argument("--trace", action="store_true")
     watch_parser.add_argument("--export")
+    watch_parser.add_argument("--symbols-per-connection", type=int, default=100)
+    watch_parser.add_argument("--max-connections", type=int, default=4)
     args = parser.parse_args()
     if args.command == "watch":
-        run_watch(args.tickers, args.trace, args.export)
+        try:
+            run_watch(args.tickers, args.trace, args.export,
+                      args.symbols_per_connection, args.max_connections)
+        except ValueError as error:
+            parser.error(str(error))
 
 
 if __name__ == "__main__":

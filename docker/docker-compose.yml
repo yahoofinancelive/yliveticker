@@ -1,31 +1,65 @@
 services:
   influxdb:
-    image: influxdb:latest
+    # Flux queries and the Python sink require InfluxDB 2, not InfluxDB 3.
+    image: influxdb:2.7
     ports:
-      - "8086:8086"
+      - "127.0.0.1:8086:8086"
     environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
-      - DOCKER_INFLUXDB_INIT_ORG=yliveticker
-      - DOCKER_INFLUXDB_INIT_BUCKET=ticker_data
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_PASSWORD:-adminpassword}
+      DOCKER_INFLUXDB_INIT_ORG: yliveticker
+      DOCKER_INFLUXDB_INIT_BUCKET: ticker_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:-my-super-secret-auth-token}
     volumes:
       - influxdb_data:/var/lib/influxdb2
+      - influxdb_config:/etc/influxdb2
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - influx bucket list --host http://localhost:8086 --org yliveticker --token "$$DOCKER_INFLUXDB_INIT_ADMIN_TOKEN" --name ticker_data > /dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  collector:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: ${INFLUX_TOKEN:-my-super-secret-auth-token}
+      TICKER_SYMBOLS: ${TICKER_SYMBOLS:-BTC-USD ETH-USD AAPL}
+      TICKER_DEMO: ${TICKER_DEMO:-0}
+      TICKER_MAX_CONNECTIONS: ${TICKER_MAX_CONNECTIONS:-4}
+    depends_on:
+      influxdb:
+        condition: service_healthy
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.4
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/dashboard.json
+      INFLUX_TOKEN: ${INFLUX_TOKEN:-my-super-secret-auth-token}
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
-      - influxdb
+      influxdb:
+        condition: service_healthy
 
 volumes:
   influxdb_data:
+  influxdb_config:
+  grafana_data:

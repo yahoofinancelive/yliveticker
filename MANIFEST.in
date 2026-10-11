@@ -1,0 +1,5 @@
+include README.md LICENSE CHANGELOG.md .dockerignore
+recursive-include docker *.yml *.json *.md Dockerfile
+recursive-include docs *.png *.md
+recursive-include examples *.py
+recursive-include tests *.py

@@ -1,160 +1,244 @@
-# Live Market Data from Yahoo! Finance
+# yliveticker — Yahoo Finance live market-data toolkit
 
 [![Python package](https://github.com/yahoofinancelive/yliveticker/workflows/Python%20package/badge.svg)](https://github.com/yahoofinancelive/yliveticker/actions)
-[![Upload Python Package](https://github.com/yahoofinancelive/yliveticker/workflows/Upload%20Python%20Package/badge.svg)](https://github.com/yahoofinancelive/yliveticker/actions)
+[![Grafana quickstart](https://github.com/yahoofinancelive/yliveticker/actions/workflows/grafana-quickstart.yml/badge.svg)](https://github.com/yahoofinancelive/yliveticker/actions/workflows/grafana-quickstart.yml)
 [![PyPI version](https://badge.fury.io/py/yliveticker.svg)](https://pypi.org/project/yliveticker/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Get real-time market data from Yahoo! Finance via WebSockets. Lightweight, efficient, and easy to use.
+Stream Yahoo Finance prices into **Python, pandas, time-series databases and
+Grafana**, or watch them directly in your terminal. Focused on Yahoo's WebSocket
+feed since 2020.
 
-## Features
+## Yahoo → Grafana in three commands
 
-- **Real-time updates**: Stream near-instant price changes from Yahoo! Finance.
-- **Interactive Dashboard**: A full-screen terminal UI with live charts and status monitoring.
-- **Robust Connectivity**: Built-in automatic reconnection and keep-alive (heartbeats).
-- **Modern Support**: Fully compatible with Protobuf 4.x/5.x/7.x.
-- **Data Analysis Ready**: Optional pandas integration and background CSV export.
-- **Comprehensive Data**: Includes price, volume, change, day high/low, and more.
+With [Docker Desktop or Docker Engine and Compose v2](https://docs.docker.com/compose/install/):
 
-## Setup
-
-### Basic Installation
 ```bash
-pip install yliveticker
+git clone https://github.com/yahoofinancelive/yliveticker.git
+cd yliveticker
+docker compose -f docker/docker-compose.yml up --build -d
 ```
 
-### 🍺 Homebrew (macOS/Linux)
+Open **[the live dashboard](http://localhost:3000/d/yliveticker-dashboard)**.
+The collector, InfluxDB and Grafana start together; the datasource and dashboard
+are provisioned automatically. No host Python installation, API key or manual
+Grafana setup is required for this local example.
+
+The default watchlist is `BTC-USD ETH-USD AAPL`. Allow the first build to finish
+and a few seconds for ticks to arrive. Crypto usually updates outside stock
+market hours. The dashboard shows latest prices, tick freshness, separate price
+charts and cumulative session volume, with a symbol selector and five-second
+refresh.
+
+![Grafana dashboard showing latest prices, tick freshness and per-symbol charts](docs/images/grafana-demo.png)
+
+*Actual dashboard running the bundled synthetic demo. `DEMO-*` series are not live quotes.*
+
+**[Quickstart settings, demo mode and troubleshooting →](docker/README.md)**
+
+## Choose your workflow
+
+| Goal | Start here |
+| --- | --- |
+| Live charts without writing Python | [Docker + Grafana](#yahoo--grafana-in-three-commands) |
+| A stock/crypto watchlist in your terminal | [CLI dashboard](#terminal-dashboard) |
+| Feed your own application with ticks | [Python callback](#python-callback) |
+| Collect DataFrames and aggregate candles | [pandas and OHLCV](#pandas-and-ohlcv) |
+| Persist ticks for queries and visualization | [Database sinks](#database-sinks) |
+
+The core client is lightweight and blocking, with automatic reconnection and
+WebSocket pings. Large watchlists automatically use a bounded connection pool.
+Optional dependencies add the CLI, pandas and database drivers.
+The protobuf decoder supports modern Protobuf versions, including 4.x/5.x/7.x.
+
+### Why a dedicated streaming toolkit?
+
+[yfinance](https://github.com/ranaroussi/yfinance) covers a broad range of Yahoo
+Finance data and also offers WebSocket clients. Choose `yliveticker` when you
+want the focused **tick → storage → visualization** workflow, bundled database
+sinks, pandas collection or a terminal watchlist. Its current Python interface
+uses callbacks; a native asyncio iterator and runtime subscription changes are
+not part of the current API.
+
+## Installation
+
+Python 3.7 or newer is required. Optional drivers may require a newer Python.
+
+```bash
+python -m pip install yliveticker
+
+# Terminal dashboard and pandas analysis
+python -m pip install 'yliveticker[cli,pandas]'
+```
+
+Homebrew (macOS/Linux):
+
 ```bash
 brew tap yahoofinancelive/yliveticker
 brew install yliveticker
 ```
 
-### 🖥️ Full Experience (CLI & Data Analysis)
+## Terminal dashboard
 
-To get the interactive dashboard and pandas support:
-```bash
-pip install yliveticker[cli,pandas]
-```
-
-## Usage Examples
-
-### 1. Interactive Dashboard (CLI)
-The easiest way to watch stocks. It provides a real-time, color-coded dashboard with **sparklines** and live status updates.
+Watch symbols with live prices, daily changes, sparklines and connection status:
 
 ```bash
-# Watch multiple symbols and export to CSV
-yliveticker watch AAPL MSFT TSLA BTC-USD --export my_data.csv
+yliveticker watch AAPL MSFT TSLA BTC-USD
+
+# Also export received ticks to CSV
+yliveticker watch AAPL BTC-USD --export my_data.csv
 ```
 
-**How it looks:**
-```text
-╭──────────────────────────────────────────────────────────────────────────╮
-│                Yahoo! Finance Live Dashboard | 01:50:56                  │
-╰──────────────────────────────────────────────────────────────────────────╯
-┏━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Symbol   ┃     Price ┃ Day Change       ┃ Trend                          ┃
-┡━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ AAPL     │    234.12 │ +1.45 (+0.62%)   │      ▂▃▅▆█                     │
-│ BTC-USD  │  98,450.00│ -120.50 (-0.12%) │  █▇▆▅▄▃                        │
-│ NVDA     │    177.62 │ +2.42 (+1.38%)   │          █▂                    │
-└──────────┴───────────┴──────────────────┴────────────────────────────────┘
-╭──────────────────────────────────────────────────────────────────────────╮
-│ Status: ● Connected | Updates: 18 | Tickers: 3 | Press Ctrl+C to Quit    │
-╰──────────────────────────────────────────────────────────────────────────╯
-```
-
-### 2. Basic Ticker (Blocking)
-This is the simplest way to print live updates to the console.
+## Python callback
 
 ```python
 import yliveticker
 
-# this function is called on each ticker update
-def on_new_msg(ws, msg):
-    print(msg)
 
-yliveticker.YLiveTicker(on_ticker=on_new_msg, ticker_names=["BTC-USD", "AAPL", "EURUSD=X"])
+def on_tick(ws, tick):
+    print(tick["id"], tick["price"], tick["timestamp"])
+
+
+# Blocks while streaming; press Ctrl+C to stop.
+yliveticker.YLiveTicker(
+    on_ticker=on_tick,
+    ticker_names=["BTC-USD", "AAPL", "EURUSD=X"],
+)
 ```
 
-### 2. Time Series and OHLCV (Pandas)
-Use `YTimeSeries` to collect data into a structured format for analysis.
+Ticks contain `id`, `price`, `timestamp`, `exchange`, `quoteType`, `marketHours`,
+`changePercent`, `dayVolume`, `dayHigh`, `dayLow`, `change`, `openPrice` and
+`priceHint`. `timestamp` is Yahoo's Unix timestamp in **milliseconds**.
+`dayVolume` is cumulative session volume; prices use each symbol's quote currency.
+Availability and update frequency vary by instrument and market.
+
+### Large watchlists and pooling
+
+The client removes duplicate symbols, preserves their order, and splits the
+watchlist into buckets of **at most 100 symbols per connection**. Up to four
+connections (400 unique symbols) are allowed by default. A larger list raises
+`ValueError` before connecting; increase `max_connections` explicitly when needed.
+
+Live tests observed Yahoo accepting only the first 100 subscriptions on one
+socket, even when later symbols were sent in separate messages. Pooling recovered
+updates beyond that boundary. This is a measured behavior of an unofficial feed,
+not a published Yahoo limit or an assurance that every symbol will update.
+
+```python
+client = yliveticker.YLiveTicker(
+    ticker_names=my_watchlist,
+    on_ticker=on_tick,
+    symbols_per_connection=100,
+    max_connections=6,  # Up to 600 unique symbols, if needed.
+    start=False,
+)
+try:
+    client.run()  # Blocks; call client.close() from another thread to stop.
+finally:
+    client.close()
+print(client.diagnostics)
+```
+
+Each bucket reconnects independently and resubscribes its own symbols. Tick,
+error and close callbacks run serially on the thread calling `run()`, preserving
+compatibility with existing sinks. `ws` in a tick callback identifies its actual
+connection; `client.ws` remains the first connection, and `client.connections`
+contains the entire pool. `on_close()` reports individual connection closures
+while streaming, so one such event does not mean the whole pool stopped.
+
+A bounded queue (1,000 events by default) applies backpressure when callbacks
+are slow. `diagnostics` reports per-connection state, received counts, reconnects,
+last receive time, queue depth and backpressure events. Keep callbacks quick:
+pooling does not solve a slow sink or provide durable replay. `close()` stops all
+sockets; `run()` drains queued events during normal shutdown. Frames arriving
+after shutdown starts can be discarded and are counted. Ctrl+C or a callback
+exception that escapes the error handler can interrupt draining. A client can
+be run only once; create a new client to restart or change subscriptions.
+
+The CLI uses the same pool. Override its bounds with
+`--symbols-per-connection 100 --max-connections 6` when necessary.
+
+## pandas and OHLCV
+
+Install `yliveticker[pandas]`, then collect ticks and inspect them after stopping:
 
 ```python
 import yliveticker
 from yliveticker import YTimeSeries
 
-ts = YTimeSeries()
-
-# Collect data (press Ctrl+C to stop and see results)
+series = YTimeSeries()
 try:
-    yliveticker.YLiveTicker(on_ticker=ts.on_ticker, ticker_names=["BTC-USD"])
+    yliveticker.YLiveTicker(
+        on_ticker=series.on_ticker,
+        ticker_names=["BTC-USD"],
+    )
 except KeyboardInterrupt:
     pass
 
-# Get raw collected data as a pandas DataFrame
-df = ts.get_dataframe()
-print(df.head())
-
-# Get 1-minute OHLCV candles
-ohlcv = ts.get_ohlcv(interval='1Min')
-for symbol, data in ohlcv.items():
-    print(f"\n--- {symbol} ---")
-    print(data)
+print(series.get_dataframe().head())
+for symbol, candles in series.get_ohlcv(interval="1min").items():
+    print(symbol, candles)
 ```
 
-### 3. Time Series Database (TSDB) & Grafana
-Store and visualize live ticker data using high-performance time-series databases and Grafana.
+The current OHLCV `volume` column is the last observed cumulative `dayVolume`
+in each interval, **not interval traded volume**. The Grafana dashboard labels
+that same value as cumulative session volume.
 
-#### Installation
-Install the necessary drivers for your chosen database:
+## Database sinks
+
+| Database | Install extra | Sink class |
+| --- | --- | --- |
+| InfluxDB 2 | `yliveticker[influxdb]` | `InfluxDBSink` |
+| TimescaleDB | `yliveticker[timescaledb]` | `TimescaleDBSink` |
+| ClickHouse | `yliveticker[clickhouse]` | `ClickHouseSink` |
+| QuestDB | `yliveticker[questdb]` | `QuestDBSink` |
+| Amazon Timestream | `yliveticker[timestream]` | `TimestreamSink` |
+
+Install only the drivers you need, or use `python -m pip install 'yliveticker[all]'`.
+For the bundled InfluxDB/Grafana setup, the Docker collector installs the
+InfluxDB extra automatically.
+
+To run the collector on your host for development, from the repository root:
+
 ```bash
-# For all supported databases
-pip install yliveticker[all]
-
-# Or individually
-pip install yliveticker[influxdb]
-pip install yliveticker[timescaledb]
-pip install yliveticker[clickhouse]
-pip install yliveticker[questdb]
-pip install yliveticker[timestream]
+docker compose -f docker/docker-compose.yml up -d influxdb grafana
+python -m pip install -e '.[influxdb]'
+python examples/tsdb_example.py BTC-USD AAPL
 ```
 
-#### Supported Sinks
-- **InfluxDB**: Native Flux support with tag/field mapping.
-- **TimescaleDB**: Automated hypertable creation and bulk inserts.
-- **ClickHouse**: High-throughput columnar storage.
-- **QuestDB**: Ultra-fast ingestion via InfluxDB Line Protocol (ILP).
-- **Amazon Timestream**: AWS-native serverless time-series database.
+Stop any existing Docker collector first to avoid duplicate writers. The
+[example](examples/tsdb_example.py) accepts symbols, environment-based InfluxDB
+settings and `--demo`, waits for database readiness and flushes on shutdown.
+See the [quickstart guide](docker/README.md) for credentials and lifecycle commands.
 
-#### Quick Start with Docker & Grafana
-We provide a pre-configured environment with InfluxDB and Grafana.
+Sinks batch writes in memory. Failed batches are logged, without durable replay;
+use an appropriate durable pipeline if your application requires lossless ingestion.
 
-1. **Start the stack**:
-   ```bash
-   cd docker
-   docker-compose up -d
-   ```
-2. **Run the example script**:
-   ```bash
-   python examples/tsdb_example.py
-   ```
-3. **Visualize**: Open `http://localhost:3000` (User: `admin`, Pass: `admin`) to see the live "Yahoo Finance Live Ticker" dashboard.
-
-## Configuration
-
-The `YLiveTicker` constructor accepts several parameters for fine-tuning:
+## Client configuration
 
 | Parameter | Default | Description |
-| :--- | :--- | :--- |
-| `on_ticker` | `None` | Callback function `f(ws, msg)` called on each update. |
-| `ticker_names` | `["AMZN"]` | List of Yahoo Finance symbols to subscribe to. |
-| `reconnect` | `5` | Delay in seconds before attempting to reconnect on failure. |
-| `ping_interval` | `15` | Interval in seconds to send WebSocket pings. |
-| `ping_timeout` | `10` | Timeout in seconds to wait for a pong response. |
-| `enable_socket_trace` | `False` | Set to `True` to see raw WebSocket frames. |
+| --- | --- | --- |
+| `on_ticker` | `None` | Callback `f(ws, tick)` for each update; otherwise prints JSON. |
+| `ticker_names` | `["AMZN"]` | Yahoo symbols; deduplicated and assigned to connection buckets. |
+| `on_error` | `None` | Optional callback `f(error)`. |
+| `on_close` | `None` | Optional callback `f()` for a connection closure while streaming. |
+| `reconnect` | `5` | Per-connection retry delay in seconds; `0` disables retries. |
+| `ping_interval` | `15` | WebSocket ping interval in seconds. |
+| `ping_timeout` | `10` | Seconds to wait for a pong. |
+| `enable_socket_trace` | `False` | Enable raw WebSocket frame logging. |
+| `symbols_per_connection` | `100` | Bucket size, from 1 to 100 unique symbols. |
+| `max_connections` | `4` | Maximum sockets; exceeding capacity raises `ValueError`. |
+| `queue_size` | `1000` | Maximum pending callback events; must be positive. |
+| `start` | `True` | Stream in the constructor; set `False` and call `run()` to start later. |
 
-## Note on Trading Hours
-If you don't observe any live metrics, please check the **trading hours** for your specific market. Many traditional stock symbols will only provide updates during market hours. Crypto symbols (like `BTC-USD`) usually stream 24/7.
+## Data availability
 
-## License
-Distributed under the MIT License. See `LICENSE` for more information.
+Yahoo's WebSocket endpoint is unofficial. Updates can be delayed, interrupted
+or absent while a market is closed. A successful synthetic quickstart check
+verifies the local pipeline; it does not verify Yahoo's live feed. Check Yahoo's
+applicable terms and data entitlements for your intended use.
+
+## Contributing and license
+
+Bug reports, examples of downstream usage and contributions are welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md). Distributed under the [MIT License](LICENSE).

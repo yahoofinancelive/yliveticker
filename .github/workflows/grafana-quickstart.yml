@@ -1,0 +1,34 @@
+name: Grafana quickstart
+
+on:
+  push:
+    branches: [main]
+    paths: ['docker/**', '.dockerignore', 'yliveticker/**', 'examples/tsdb_example.py', 'setup.py', 'README.md', 'tests/verify_grafana_integration.py', '.github/workflows/grafana-quickstart.yml']
+  pull_request:
+    branches: [main]
+    paths: ['docker/**', '.dockerignore', 'yliveticker/**', 'examples/tsdb_example.py', 'setup.py', 'README.md', 'tests/verify_grafana_integration.py', '.github/workflows/grafana-quickstart.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    env:
+      TICKER_DEMO: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: docker compose -f docker/docker-compose.yml config --quiet
+      - name: Start the complete stack with synthetic ticks
+        run: docker compose -f docker/docker-compose.yml up --build -d
+      - name: Verify writes, provisioning, symbol discovery and panel queries
+        run: python3 tests/verify_grafana_integration.py
+      - name: Show service logs
+        if: always()
+        run: docker compose -f docker/docker-compose.yml logs --no-color
+      - name: Stop stack and remove test volumes
+        if: always()
+        run: docker compose -f docker/docker-compose.yml down -v
