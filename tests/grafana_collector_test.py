@@ -21,6 +21,8 @@ def test_compose_and_collector_default_to_live(monkeypatch):
     compose = (Path(__file__).parents[1] / "docker" / "docker-compose.yml").read_text()
     assert "TICKER_SYNTHETIC: ${TICKER_SYNTHETIC:-0}" in compose
     assert "TICKER_SYMBOLS: ${TICKER_SYMBOLS:-" + " ".join(collector.DEFAULT_SYMBOLS) + "}" in compose
+    workflow = (Path(__file__).parents[1] / ".github" / "workflows" / "grafana-quickstart.yml").read_text()
+    assert "TICKER_SYMBOLS: BTC-USD" in workflow
 
 
 def test_symbol_arguments_override_environment(monkeypatch):

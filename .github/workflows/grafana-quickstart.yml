@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 10
     env:
       TICKER_SYNTHETIC: '1'
+      # Keep deterministic CI small; the product default remains the global live watchlist.
+      TICKER_SYMBOLS: BTC-USD
       COMPOSE_PROJECT_NAME: yliveticker-smoke
     steps:
       - uses: actions/checkout@v4
