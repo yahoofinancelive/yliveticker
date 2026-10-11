@@ -55,7 +55,7 @@ def main():
                 body = page.locator("body").inner_text()
                 if ("Synthetic test feed" in body
                         and "SYNTH-BTC-USD: price" in body
-                        and "SYNTH-BTC-USD: session volume (cumulative)" in body
+                        and "SYNTH-BTC-USD: reported session volume (cumulative)" in body
                         and "No data" not in body and "Waiting for ticks" not in body):
                     break
                 if time.monotonic() >= deadline:

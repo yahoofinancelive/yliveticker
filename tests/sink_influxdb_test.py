@@ -37,10 +37,28 @@ class TestInfluxDBSink(unittest.TestCase):
         self.assertEqual(point._tags['id'], "AAPL")
         self.assertEqual(point._fields['price'], 150.0)
         self.assertEqual(point._fields['volume'], 1000000.0)
+        self.assertEqual(point._fields['volume_available'], 1)
         
         # Verify timestamp (2020-09-13 12:26:40 UTC)
         expected_dt = datetime.fromtimestamp(1600000000, tz=timezone.utc)
         self.assertEqual(point._time, expected_dt)
+
+    @patch('influxdb_client.InfluxDBClient')
+    def test_zero_volume_is_treated_as_unavailable(self, MockClient):
+        mock_write_api = MockClient.return_value.write_api.return_value
+        sink = InfluxDBSink(url="http://localhost:8086", token="token", org="org", bucket="bucket")
+
+        sink.write_batch([{
+            'id': 'EURUSD=X',
+            'price': 1.16,
+            'dayVolume': 0,
+            'timestamp': 1600000000000,
+        }])
+
+        point = mock_write_api.write.call_args.kwargs['record'][0]
+        self.assertEqual(point._fields['price'], 1.16)
+        self.assertEqual(point._fields['volume_available'], 0)
+        self.assertNotIn('volume', point._fields)
 
 if __name__ == '__main__':
     unittest.main()

@@ -46,7 +46,8 @@ def verify_once():
     found = grafana_request("/api/search?query=yliveticker")
     assert any(item["uid"] == dashboard["uid"] for item in found), "Dashboard cannot be found by project name"
 
-    queries = [("Symbols", dashboard["templating"]["list"][0]["query"])]
+    queries = [(variable["label"], variable["query"])
+               for variable in dashboard["templating"]["list"]]
     for panel in dashboard["panels"]:
         for target in panel.get("targets", []):
             assert panel["datasource"]["uid"] == datasource["uid"], panel["title"]
@@ -55,6 +56,7 @@ def verify_once():
     for title, query in queries:
         # Check the stored panel queries, including Flux compilation via Grafana.
         query = query.replace("${symbol:regex}", "SYNTH-.*")
+        query = query.replace("${volume_symbol:regex}", "SYNTH-.*")
         now = int(time.time() * 1000)
         result = grafana_request("/api/ds/query", {
             "from": str(now - 900000), "to": str(now),
@@ -68,7 +70,7 @@ def verify_once():
         assert frames and any(any(values) for frame in frames for values in frame["data"]["values"]), (
             title, "No data returned; run the collector with TICKER_SYNTHETIC=1",
         )
-        if title == "Symbols":
+        if title in ("Symbols", "Volume symbols"):
             values = [value for frame in frames for column in frame["data"]["values"] for value in column]
             assert any(isinstance(value, str) and value.startswith("SYNTH-") for value in values), values
         elif title == "Active feed (last 30 seconds)":

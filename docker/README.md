@@ -26,10 +26,12 @@ Open **[Grafana at localhost:3000](http://localhost:3000)**. The ticker dashboar
 is the home page and appears under **Dashboards → yliveticker**. You can also use
 [its permanent URL](http://localhost:3000/d/yliveticker-dashboard).
 The top of the dashboard identifies the active feed, distinguishes synthetic
-prices from Yahoo quotes, and shows the stored tick count. The symbol selector
-uses the displayed time range. The default is one hour so exchanges whose Yahoo
-quotes are delayed—such as New Zealand—remain discoverable. The feed status and
-tick count update even before symbol discovery completes.
+prices from Yahoo quotes, maps every default symbol to its market and regular
+local trading hours, and shows the stored tick count. It explicitly identifies
+`FPH.NZ` as **New Zealand (NZX)**. The symbol selector uses the displayed time
+range. The default is one hour so exchanges whose Yahoo quotes are delayed—such
+as New Zealand—remain discoverable. The feed status and tick count update even
+before symbol discovery completes.
 
 The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
 `TICKER_SYNTHETIC=1` has no effect there. Use the PR branch to try this quickstart.
@@ -39,7 +41,9 @@ The dashboard provides:
 - Active feed and stored tick count, queried from InfluxDB.
 - Latest observed prices and the age of each symbol's last tick.
 - A symbol selector and separate price charts for each selected symbol.
-- **Cumulative session volume** (`dayVolume`), not interval/candle volume.
+- Positive **cumulative session volume** (`dayVolume`), not interval/candle
+  volume. Yahoo's missing/unsupported volume arrives as zero for some assets;
+  the quickstart treats it as unavailable and omits those volume panels.
 - Five-second refresh and UTC timestamps. Prices remain in each symbol's quote
   currency; they are not converted into a common currency.
 
@@ -47,22 +51,24 @@ The dashboard provides:
 
 The default watchlist is geographically and asset-class diverse:
 
-| Market | Yahoo symbol | Instrument |
-| --- | --- | --- |
-| Global | `BTC-USD`, `EURUSD=X`, `GC=F` | Bitcoin, EUR/USD, gold futures |
-| New Zealand | `FPH.NZ` | Fisher & Paykel Healthcare |
-| Australia | `BHP.AX` | BHP |
-| Japan | `7203.T` | Toyota |
-| Hong Kong | `0700.HK` | Tencent |
-| Singapore | `D05.SI` | DBS Group |
-| India | `RELIANCE.NS` | Reliance Industries |
-| Dubai | `EMAAR.AE` | Emaar Properties |
-| South Africa | `NPN.JO` | Naspers |
-| Germany (Xetra/Frankfurt) | `SAP.DE` | SAP |
-| United Kingdom | `HSBA.L` | HSBC |
-| United States | `AAPL`, `NVDA` | Apple; NVIDIA (California issuer) |
-| Canada | `SHOP.TO` | Shopify |
-| Brazil | `VALE3.SA` | Vale |
+| Market | Yahoo symbol | Instrument | Regular session (local time) |
+| --- | --- | --- | --- |
+| Global | `BTC-USD` | Bitcoin | 24/7 |
+| Global FX | `EURUSD=X` | EUR/USD | 24 hours, Sunday–Friday |
+| COMEX | `GC=F` | Gold futures | Sun–Fri 17:00–16:00 CT; daily 16:00–17:00 break |
+| New Zealand (NZX) | `FPH.NZ` | Fisher & Paykel Healthcare | 10:00–16:45 |
+| Australia (ASX) | `BHP.AX` | BHP | 10:00–16:00 |
+| Japan (Tokyo) | `7203.T` | Toyota | 09:00–11:30; 12:30–15:30 |
+| Hong Kong | `0700.HK` | Tencent | 09:30–12:00; 13:00–16:00 |
+| Singapore | `D05.SI` | DBS Group | 09:00–12:00; 13:00–17:00 |
+| India | `RELIANCE.NS` | Reliance Industries | 09:15–15:30 |
+| Dubai | `EMAAR.AE` | Emaar Properties | 10:00–15:00 |
+| South Africa | `NPN.JO` | Naspers | 09:00–17:00 |
+| Germany (Xetra) | `SAP.DE` | SAP | 09:00–17:30 |
+| United Kingdom (London) | `HSBA.L` | HSBC | 08:00–16:30 |
+| United States (New York) | `AAPL`, `NVDA` | Apple; NVIDIA (California issuer) | 09:30–16:00 ET |
+| Canada (Toronto) | `SHOP.TO` | Shopify | 09:30–16:00 ET |
+| Brazil (São Paulo) | `VALE3.SA` | Vale | 10:00–17:00 BRT |
 
 These are real Yahoo instruments, not bundled sample records. Ordered from
 Auckland westward, their regular sessions provide broad weekday coverage, but
@@ -70,7 +76,9 @@ they are not a guaranteed continuous feed: holidays, closed markets and Yahoo
 availability still apply. A West Coast company still trades on the US market
 schedule. `BTC-USD` supplies true 24/7 ticks; FX and gold futures bridge most of
 the weekday gaps. Some exchanges are delayed by Yahoo, so their stored event
-timestamps can trail wall-clock time even while the market is open.
+timestamps can trail wall-clock time even while the market is open. The table
+shows regular full-day sessions; holidays, special/half-day sessions and daylight
+saving changes can alter them.
 
 On macOS/Linux, from the repository root:
 
@@ -86,7 +94,10 @@ TICKER_SYMBOLS=BTC-USD NVDA EURUSD=X
 
 Then run the original Compose command again. Previously stored symbols remain
 available when they have ticks in the selected time range; select just the symbols
-you want to view. Closed markets naturally show older ticks or no ticks in range.
+you want to view. Grafana builds the selector and repeated panels from symbols
+with a stored price in that range, so a symbol with no tick is omitted instead of
+rendered as an empty chart. Closed markets naturally show older ticks or no ticks
+in range.
 
 Live watchlists are deduplicated and pooled automatically, with at most 100
 symbols per Yahoo connection. The default limit is four connections (400 unique
@@ -207,6 +218,7 @@ queries the default `ticker_data` bucket.
 | --- | --- |
 | Empty charts | Confirm this branch has a `collector` service: `docker compose -f docker/docker-compose.yml config --services`. Check `ps` and collector logs. The synthetic test feed should show `SYNTH-*` ticks; allow the first build to finish. |
 | Open market missing from Symbols | Widen the time range. Yahoo marks some exchanges as delayed; the one-hour dashboard default accommodates the typical delay, while a shorter custom range can hide those ticks. |
+| Volume panel is missing | Yahoo does not provide meaningful `dayVolume` for every instrument (commonly FX and some delayed quotes). Zero is treated as unavailable, so the dashboard omits that volume panel rather than implying zero trading. |
 | Dashboard hard to find | Open `http://localhost:3000/d/yliveticker-dashboard` or **Dashboards → yliveticker**. Existing personal home preferences can override the configured home page. |
 | Old Price/Volume page, `-- Grafana --`, or `e.replace is not a function` | Pull this branch and rerun `up --build -d`, then the readiness script. The upgrade replaces the legacy dashboard without requiring `down -v`. |
 | Grafana exits with “data source not found” | Pull this branch and rebuild. Its provisioning migrates the earlier generated datasource UID. Keep your volumes. |

@@ -10,7 +10,7 @@
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 6,
+  "version": 7,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
@@ -24,14 +24,14 @@
       "title": "Ticker dashboard · InfluxDB storage",
       "type": "text",
       "gridPos": {
-        "h": 4,
+        "h": 10,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "markdown",
-        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.** `BTC-USD` · `EURUSD=X` · `GC=F` · `FPH.NZ` · `BHP.AX` · `7203.T` · `0700.HK` · `D05.SI` · `RELIANCE.NS` · `EMAAR.AE` · `NPN.JO` · `SAP.DE` · `HSBA.L` · `AAPL` · `NVDA` · `SHOP.TO` · `VALE3.SA`\n\nWeekday exchange handoff; BTC is 24/7. The one-hour default includes delayed exchange quotes. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\n**Regular sessions · local market time · weekdays unless noted:**\n- **Always / near-continuous:** `BTC-USD` crypto 24/7 · `EURUSD=X` global FX 24h Sun–Fri · `GC=F` gold futures Sun–Fri 17:00–16:00 CT (16:00–17:00 break)\n- **Asia-Pacific:** `FPH.NZ` **New Zealand (NZX) 10:00–16:45** · `BHP.AX` Sydney 10:00–16:00 · `7203.T` Tokyo 09:00–11:30 / 12:30–15:30 · `0700.HK` Hong Kong 09:30–12:00 / 13:00–16:00 · `D05.SI` Singapore 09:00–12:00 / 13:00–17:00\n- **India → Europe:** `RELIANCE.NS` India 09:15–15:30 · `EMAAR.AE` Dubai 10:00–15:00 · `NPN.JO` Johannesburg 09:00–17:00 · `SAP.DE` Xetra 09:00–17:30 · `HSBA.L` London 08:00–16:30\n- **Americas:** `AAPL` / `NVDA` New York 09:30–16:00 ET · `SHOP.TO` Toronto 09:30–16:00 ET · `VALE3.SA` São Paulo 10:00–17:00 BRT\n\nPrice panels appear only after a tick exists in the selected range; unticked symbols are omitted rather than drawn empty. Unavailable volume panels are omitted entirely. Holidays, special sessions, DST and Yahoo delays can change observed coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },
@@ -47,7 +47,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -111,7 +111,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 10
       },
       "fieldConfig": {
         "defaults": {
@@ -160,7 +160,7 @@
         "h": 4,
         "w": 16,
         "x": 0,
-        "y": 8
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -219,7 +219,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 8
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -277,7 +277,7 @@
       "id": 3,
       "title": "${symbol}: price",
       "type": "timeseries",
-      "description": "Last observed price per display window; panels repeat per selected symbol to keep independent price scales.",
+      "description": "Last observed price per display window; panels repeat per selected symbol to keep independent price scales. The market-hours guide above identifies each symbol, including FPH.NZ as New Zealand (NZX).",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -286,7 +286,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 12
+        "y": 18
       },
       "fieldConfig": {
         "defaults": {
@@ -346,9 +346,9 @@
     },
     {
       "id": 4,
-      "title": "${symbol}: session volume (cumulative)",
+      "title": "${volume_symbol}: reported session volume (cumulative)",
       "type": "timeseries",
-      "description": "Yahoo dayVolume as received. This is cumulative session volume, not per-candle or interval volume.",
+      "description": "Positive Yahoo dayVolume values as received. This is cumulative session volume, not per-candle or interval volume. Yahoo omits meaningful dayVolume for some instruments (commonly FX and some delayed quotes); their volume panels are omitted rather than showing a misleading zero.",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -357,7 +357,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 26
       },
       "fieldConfig": {
         "defaults": {
@@ -397,10 +397,10 @@
             "type": "influxdb",
             "uid": "yliveticker-influxdb"
           },
-          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => r.id =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"volume\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => r.id =~ /^${volume_symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"volume\" and r._value > 0.0)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
         }
       ],
-      "repeat": "symbol",
+      "repeat": "volume_symbol",
       "repeatDirection": "h",
       "maxPerRow": 3,
       "options": {
@@ -444,6 +444,28 @@
           "uid": "yliveticker-influxdb"
         },
         "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "volume_symbol",
+        "label": "Volume symbols",
+        "type": "query",
+        "hide": 2,
+        "datasource": {
+          "type": "influxdb",
+          "uid": "yliveticker-influxdb"
+        },
+        "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"volume_available\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> filter(fn: (r) => r._value == 1)\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()",
         "refresh": 2,
         "sort": 1,
         "multi": true,
