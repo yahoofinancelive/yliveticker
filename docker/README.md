@@ -9,13 +9,16 @@ From the repository root, on the `feat/pooling-and-grafana` branch until
 [PR #22](https://github.com/yahoofinancelive/yliveticker/pull/22) merges:
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build -d --wait --wait-timeout 180
+docker compose -f docker/docker-compose.yml up --build -d
+sh docker/wait-for-stack.sh
 ```
 
 **Default mode is synthetic demo data.** The collector emits `DEMO-BTC-USD`,
 `DEMO-ETH-USD` and `DEMO-AAPL` every second, writes them to **InfluxDB 2,
-bucket `ticker_data`**, and Grafana queries that bucket. `--wait` waits for recent
+bucket `ticker_data`**, and Grafana queries that bucket. The readiness script waits for recent
 ticks in storage and Grafana readiness; a timeout reports a startup failure.
+It uses container health checks and works with older Compose v2 versions
+without the `--wait` flag. Set `QUICKSTART_TIMEOUT=300` when a longer wait is needed.
 The first build downloads images and Python dependencies.
 
 Open **[Grafana at localhost:3000](http://localhost:3000)**. The ticker dashboard
@@ -70,7 +73,8 @@ pooling cannot guarantee updates for an inactive instrument or closed market.
 The plain command defaults to demo. To explicitly request the same mode:
 
 ```bash
-TICKER_DEMO=1 docker compose -f docker/docker-compose.yml up --build -d --wait --wait-timeout 180
+TICKER_DEMO=1 docker compose -f docker/docker-compose.yml up --build -d
+sh docker/wait-for-stack.sh
 ```
 
 The collector logs **DEMO MODE** and emits synthetic prices under `DEMO-*`
@@ -96,7 +100,8 @@ Stored series remain visible within the selected time range. Select live or
 
 ## Upgrade an existing quickstart
 
-Pull the current PR branch and rerun `up --build -d --wait --wait-timeout 180`.
+Pull the current PR branch, rerun `up --build -d`, then run
+`sh docker/wait-for-stack.sh`.
 Provisioning replaces the old Grafana `InfluxDB` datasource with a stable UID,
 updates the dashboard, and keeps stored InfluxDB ticks. This fixes the
 `Datasource provisioning error: data source not found` failure on existing
@@ -178,10 +183,11 @@ queries the default `ticker_data` bucket.
 | Dashboard hard to find | Open `http://localhost:3000/d/yliveticker-dashboard` or **Dashboards → yliveticker**. Existing personal home preferences can override the configured home page. |
 | Internal Grafana datasource shown | Open the ticker dashboard; its data panels use `yliveticker-influxdb`. The older dashboard's built-in annotations used `-- Grafana --`; those annotations have been removed. |
 | Grafana exits with “data source not found” | Pull this branch and rebuild. Its provisioning migrates the earlier generated datasource UID. Keep your volumes. |
-| `--wait` times out | Inspect `ps`, `logs influxdb grafana collector`, and the collector health check below. Do not assume a running container has written data. |
+| Readiness check times out | Inspect `ps`, `logs influxdb grafana collector`, and the collector health check below. Do not assume a running container has written data. |
 | Only old/demo symbols | Select the desired symbols, then refresh the dashboard or widen the time range. |
 | InfluxDB unhealthy / unauthorized | Check token consistency and whether an existing volume was initialized with different credentials. |
 | Port already in use | Stop the conflicting local service or change the host-side port in Compose. |
+| `unknown flag: --wait` | Omit `--wait` and `--wait-timeout`: run `up --build -d`, followed by `sh docker/wait-for-stack.sh`. |
 | Build or startup fails | Confirm Docker is running and `docker compose version` works; inspect `docker compose -f docker/docker-compose.yml logs`. |
 
 ## Integration check

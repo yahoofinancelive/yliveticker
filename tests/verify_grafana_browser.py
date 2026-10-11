@@ -44,8 +44,9 @@ def main():
         if args.start_collector:
             subprocess.run([
                 "docker", "compose", "-f", "docker/docker-compose.yml", "up", "--build",
-                "-d", "--wait", "--wait-timeout", "180", "collector",
+                "-d", "collector",
             ], cwd=ROOT, check=True)
+            subprocess.run(["sh", "docker/wait-for-stack.sh"], cwd=ROOT, check=True)
 
         for page in pages:
             # Stay on the same page: no reload, variable selection or manual refresh.

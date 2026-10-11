@@ -9,7 +9,7 @@ Stream Yahoo Finance prices into **Python, pandas, time-series databases and
 Grafana**, or watch them directly in your terminal. Focused on Yahoo's WebSocket
 feed since 2020.
 
-## InfluxDB + Grafana demo in three commands
+## InfluxDB + Grafana demo
 
 With [Docker Desktop or Docker Engine and Compose v2](https://docs.docker.com/compose/install/):
 
@@ -20,7 +20,8 @@ Compose file does not start a collector and ignores `TICKER_DEMO`.
 ```bash
 git clone https://github.com/yahoofinancelive/yliveticker.git
 cd yliveticker
-docker compose -f docker/docker-compose.yml up --build -d --wait --wait-timeout 180
+docker compose -f docker/docker-compose.yml up --build -d
+sh docker/wait-for-stack.sh
 ```
 
 Open **[Grafana](http://localhost:3000)** — the ticker dashboard is the home page.
@@ -32,8 +33,9 @@ stored ticks through the provisioned InfluxDB datasource.
 **The default is a synthetic demo**, so a fresh startup produces charts without
 Yahoo or open markets. `DEMO-BTC-USD`, `DEMO-ETH-USD` and `DEMO-AAPL` update every
 second. The dashboard shows the active feed, stored tick count, latest prices,
-tick freshness, separate charts and cumulative volume. `--wait` checks that
-recent ticks actually reached InfluxDB before the command succeeds.
+tick freshness, separate charts and cumulative volume. The readiness script checks that
+recent ticks actually reached InfluxDB before reporting success. It also works
+with Compose versions that do not support `--wait`.
 
 To collect **live Yahoo quotes**, explicitly switch modes:
 
@@ -56,7 +58,7 @@ A setting before one command only applies to that command.
 
 | Goal | Start here |
 | --- | --- |
-| Live charts without writing Python | [Docker + Grafana](#influxdb--grafana-demo-in-three-commands) |
+| Live charts without writing Python | [Docker + Grafana](#influxdb--grafana-demo) |
 | A stock/crypto watchlist in your terminal | [CLI dashboard](#terminal-dashboard) |
 | Feed your own application with ticks | [Python callback](#python-callback) |
 | Collect DataFrames and aggregate candles | [pandas and OHLCV](#pandas-and-ohlcv) |

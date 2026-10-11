@@ -25,7 +25,8 @@ jobs:
         run: docker compose -f docker/docker-compose.yml config --quiet
       - name: Seed an existing Grafana database with the legacy datasource
         run: |
-          docker compose -f docker/docker-compose.yml up -d --wait influxdb
+          docker compose -f docker/docker-compose.yml up -d influxdb
+          sh docker/wait-for-stack.sh influxdb
           mkdir -p "$RUNNER_TEMP/legacy-provisioning"
           docker compose -f docker/docker-compose.yml run -d --no-deps --service-ports \
             --name legacy-grafana \
@@ -34,7 +35,9 @@ jobs:
           python3 tests/verify_grafana_integration.py --seed-legacy
           docker rm -f legacy-grafana
       - name: Start the database and dashboard before the collector
-        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 180 influxdb grafana
+        run: |
+          docker compose -f docker/docker-compose.yml up -d influxdb grafana
+          sh docker/wait-for-stack.sh influxdb grafana
       - name: Install browser test dependencies
         run: |
           python3 -m pip install playwright
