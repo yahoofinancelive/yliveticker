@@ -13,6 +13,13 @@ collector = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(collector)
 
 
+def test_compose_and_collector_default_to_live(monkeypatch):
+    monkeypatch.delenv("TICKER_DEMO", raising=False)
+    assert not collector.parse_args([]).demo
+    compose = (Path(__file__).parents[1] / "docker" / "docker-compose.yml").read_text()
+    assert "TICKER_DEMO: ${TICKER_DEMO:-0}" in compose
+
+
 def test_symbol_arguments_override_environment(monkeypatch):
     monkeypatch.setenv("TICKER_SYMBOLS", "BTC-USD ETH-USD")
     monkeypatch.setenv("TICKER_DEMO", "0")

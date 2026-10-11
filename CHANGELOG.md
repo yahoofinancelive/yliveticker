@@ -12,8 +12,8 @@
 - Add `start=False` and `run()` for controllable startup; make `close()` stop the
   entire pool. Fix the CLI's ability to stop a running client and expose pool flags.
 - Add the Yahoo → InfluxDB 2 → Grafana Compose quickstart, provisioned dashboard,
-  clearly labeled synthetic demo, readiness checks and collector shutdown flushing.
-- Default the Docker quickstart to clearly labeled synthetic data; check recent
+  opt-in clearly labeled synthetic mode, readiness checks and collector shutdown flushing.
+- Default the Docker quickstart to live Yahoo quotes; check recent mode-specific
   InfluxDB writes for collector health and make the ticker dashboard the home page.
   Migrate Grafana databases with the legacy provisioned dashboard and datasource
   UIDs without deleting ticks. Pin InfluxDB 2.9.1 so volumes created by the old

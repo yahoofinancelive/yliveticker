@@ -36,8 +36,8 @@ services:
       INFLUX_URL: http://influxdb:8086
       INFLUX_TOKEN: ${INFLUX_TOKEN:-my-super-secret-auth-token}
       TICKER_SYMBOLS: ${TICKER_SYMBOLS:-BTC-USD ETH-USD AAPL}
-      # A fresh quickstart always has data, even when Yahoo is unavailable.
-      TICKER_DEMO: ${TICKER_DEMO:-1}
+      # Exercise the real package path by default; demo data is explicit opt-in.
+      TICKER_DEMO: ${TICKER_DEMO:-0}
       TICKER_MAX_CONNECTIONS: ${TICKER_MAX_CONNECTIONS:-4}
     depends_on:
       influxdb:

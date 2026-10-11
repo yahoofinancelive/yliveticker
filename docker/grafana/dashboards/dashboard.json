@@ -2,7 +2,7 @@
   "id": null,
   "uid": "yliveticker-dashboard",
   "title": "yliveticker · Yahoo Finance",
-  "description": "Ticks are stored in InfluxDB 2 (ticker_data). DEMO-* prices are synthetic. Live mode uses Yahoo Finance.",
+  "description": "Live Yahoo Finance ticks are stored in InfluxDB 2 (ticker_data). DEMO-* prices appear only in explicit synthetic mode.",
   "tags": [
     "yliveticker",
     "yahoo-finance",
@@ -10,7 +10,7 @@
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
@@ -31,7 +31,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Ticks are stored in [InfluxDB](http://localhost:8086) · bucket `ticker_data`.** **`DEMO-*` symbols are synthetic prices.** Select symbols above; charts refresh every 5 seconds.\n\nCharts empty? Allow startup to finish. In live mode, closed markets or an unavailable Yahoo feed can leave charts empty. [Quickstart and troubleshooting](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**The default collector streams live Yahoo Finance ticks into [InfluxDB](http://localhost:8086) · bucket `ticker_data`.** **`DEMO-*` symbols appear only when synthetic mode is explicitly enabled.** Select symbols above; charts refresh every 5 seconds.\n\nCharts empty? Allow startup to finish. Closed markets or an unavailable Yahoo feed can leave charts empty. [Quickstart and troubleshooting](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },

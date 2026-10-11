@@ -13,10 +13,11 @@ docker compose -f docker/docker-compose.yml up --build -d
 sh docker/wait-for-stack.sh
 ```
 
-**Default mode is synthetic demo data.** The collector emits `DEMO-BTC-USD`,
-`DEMO-ETH-USD` and `DEMO-AAPL` every second, writes them to **InfluxDB 2,
-bucket `ticker_data`**, and Grafana queries that bucket. The readiness script waits for recent
-ticks in storage and Grafana readiness; a timeout reports a startup failure.
+**Default mode is the live Yahoo feed.** The collector subscribes to `BTC-USD`,
+`ETH-USD` and `AAPL` through `yliveticker`, writes received ticks to **InfluxDB 2,
+bucket `ticker_data`**, and Grafana queries that bucket. The readiness script waits
+for a recent live tick in storage and Grafana readiness; a timeout reports a
+startup or upstream-feed failure.
 It uses container health checks and works with older Compose v2 versions
 without the `--wait` flag. Set `QUICKSTART_TIMEOUT=300` when a longer wait is needed.
 The first build downloads images and Python dependencies.
@@ -46,13 +47,12 @@ The dashboard provides:
 On macOS/Linux, from the repository root:
 
 ```bash
-TICKER_DEMO=0 TICKER_SYMBOLS="BTC-USD NVDA EURUSD=X" docker compose -f docker/docker-compose.yml up -d
+TICKER_SYMBOLS="BTC-USD NVDA EURUSD=X" docker compose -f docker/docker-compose.yml up -d
 ```
 
 On Windows or to keep the setting between runs, put this in `docker/.env`:
 
 ```dotenv
-TICKER_DEMO=0
 TICKER_SYMBOLS=BTC-USD NVDA EURUSD=X
 ```
 
@@ -68,9 +68,16 @@ collector accepts the same environment setting or `--max-connections 6`.
 The 100-symbol boundary was observed in live tests of Yahoo's unofficial feed;
 pooling cannot guarantee updates for an inactive instrument or closed market.
 
-## Demo and live modes
+## Live and demo modes
 
-The plain command defaults to demo. To explicitly request the same mode:
+The plain command connects to Yahoo. Yahoo's unofficial feed can be delayed or
+unavailable, and closed markets can be silent. Crypto usually updates outside
+stock-market hours. The collector is healthy only while a configured symbol has
+a tick within the last 30 seconds; an unhealthy collector can mean the upstream
+feed is silent, even if the process is running.
+
+To test the complete pipeline deterministically without relying on Yahoo or
+market hours, explicitly enable demo mode:
 
 ```bash
 TICKER_DEMO=1 docker compose -f docker/docker-compose.yml up --build -d
@@ -81,20 +88,9 @@ The collector logs **DEMO MODE** and emits synthetic prices under `DEMO-*`
 symbols. Both modes use the same InfluxDB sink and bucket. Grafana's volume
 stores dashboard settings; market ticks are stored in the InfluxDB volume.
 
-For live Yahoo data:
-
-```bash
-TICKER_DEMO=0 docker compose -f docker/docker-compose.yml up --build -d
-```
-
-Yahoo's unofficial feed can be delayed or unavailable. Crypto usually updates
-outside stock-market hours. The collector is healthy only while a configured
-symbol has a tick within the last 30 seconds; an unhealthy live collector can
-mean the upstream feed is silent, even if the process is running.
-
 Put `TICKER_DEMO=0` or `TICKER_DEMO=1` in `docker/.env` to keep your choice between
 commands. A prefix such as `TICKER_DEMO=0` applies to just that invocation;
-running a plain command afterwards uses `.env` or the default demo mode.
+running a plain command afterwards uses `.env` or the default live mode.
 Stored series remain visible within the selected time range. Select live or
 `DEMO-*` symbols explicitly when switching modes.
 

@@ -9,7 +9,7 @@ Stream Yahoo Finance prices into **Python, pandas, time-series databases and
 Grafana**, or watch them directly in your terminal. Focused on Yahoo's WebSocket
 feed since 2020.
 
-## InfluxDB + Grafana demo
+## InfluxDB + Grafana quickstart
 
 With [Docker Desktop or Docker Engine and Compose v2](https://docs.docker.com/compose/install/):
 
@@ -30,27 +30,29 @@ It is also listed under **Dashboards → yliveticker**, with a
 The collector writes to **InfluxDB 2, bucket `ticker_data`**; Grafana reads those
 stored ticks through the provisioned InfluxDB datasource.
 
-**The default is a synthetic demo**, so a fresh startup produces charts without
-Yahoo or open markets. `DEMO-BTC-USD`, `DEMO-ETH-USD` and `DEMO-AAPL` update every
-second. The dashboard shows the active feed, stored tick count, latest prices,
-tick freshness, separate charts and cumulative volume. The readiness script checks that
-recent ticks actually reached InfluxDB before reporting success. It also works
-with Compose versions that do not support `--wait`.
+**The default uses live Yahoo quotes** for `BTC-USD`, `ETH-USD` and `AAPL` through
+the package's real WebSocket client. The dashboard shows the active feed, stored
+tick count, latest prices, tick freshness, separate charts and cumulative volume.
+The readiness script checks that a recent live tick actually reached InfluxDB
+before reporting success. It also works with Compose versions that do not support
+`--wait`.
 
-To collect **live Yahoo quotes**, explicitly switch modes:
+For a deterministic offline/CI check, explicitly enable synthetic data:
 
 ```bash
-TICKER_DEMO=0 docker compose -f docker/docker-compose.yml up --build -d
+TICKER_DEMO=1 docker compose -f docker/docker-compose.yml up --build -d
+sh docker/wait-for-stack.sh
 ```
 
-Live mode subscribes to `BTC-USD ETH-USD AAPL`. Yahoo's unofficial feed can be
-unavailable, and closed markets can be silent. Use `docker/.env` to persist your
-mode: `TICKER_DEMO=0` for live quotes or `TICKER_DEMO=1` for synthetic data.
-A setting before one command only applies to that command.
+Synthetic symbols are visibly prefixed `DEMO-` and never presented as market
+quotes. Yahoo's unofficial feed can be unavailable, and closed markets can be
+silent; the default crypto symbols normally continue updating outside equity
+market hours. Put `TICKER_DEMO=1` in `docker/.env` only when you want demo mode.
 
 ![Grafana dashboard showing latest prices, tick freshness and per-symbol charts](docs/images/grafana-demo.png)
 
-*Actual dashboard running the bundled synthetic demo. `DEMO-*` series are not live quotes.*
+*Dashboard layout shown with the explicit deterministic mode used by CI. The
+default quickstart connects to Yahoo; `DEMO-*` series are never live quotes.*
 
 **[Quickstart settings, demo mode and troubleshooting →](docker/README.md)**
 
@@ -58,7 +60,7 @@ A setting before one command only applies to that command.
 
 | Goal | Start here |
 | --- | --- |
-| Live charts without writing Python | [Docker + Grafana](#influxdb--grafana-demo) |
+| Live charts without writing Python | [Docker + Grafana](#influxdb--grafana-quickstart) |
 | A stock/crypto watchlist in your terminal | [CLI dashboard](#terminal-dashboard) |
 | Feed your own application with ticks | [Python callback](#python-callback) |
 | Collect DataFrames and aggregate candles | [pandas and OHLCV](#pandas-and-ohlcv) |
