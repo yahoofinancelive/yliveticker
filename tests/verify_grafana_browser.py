@@ -77,13 +77,18 @@ def main():
                         and "NVDA: price" in body
                         and "Received ticks/min (last 60s)" in body
                         and "Received ticks per minute" in body
-                        and "Symbol\nAge" in body
                         and "No data" in body
                         and "Waiting for ticks" not in body):
                     break
                 if time.monotonic() >= deadline:
                     raise AssertionError("Dashboard did not populate automatically:\n" + body)
                 page.wait_for_timeout(1000)
+            page.mouse.wheel(0, -10000)
+            page.wait_for_timeout(500)
+            age_table = page.get_by_role("region").filter(
+                has=page.get_by_role("heading", name="Time since last tick"),
+            ).inner_text()
+            assert "Symbol\nAge" in age_table and "SYNTH-BTC-USD" in age_table, age_table
             print("PASS: data populated and sleeping default symbols stayed visible:",
                   page.url, flush=True)
 
