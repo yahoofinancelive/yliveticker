@@ -37,6 +37,7 @@ def verify_once():
     assert dashboard["title"] == "yliveticker · Yahoo Finance", dashboard["title"]
     assert response["meta"]["provisioned"], "Ticker dashboard is not file-provisioned"
     assert dashboard["refresh"] == "5s"
+    assert dashboard["timezone"] == "browser"
     assert dashboard["time"]["from"] == "now-1h", "Default range must include delayed exchanges"
     assert dashboard["templating"]["list"][0]["includeAll"]
     symbol_variable = dashboard["templating"]["list"][0]
@@ -48,10 +49,13 @@ def verify_once():
     assert "| Yahoo symbol | Market / instrument |" not in dashboard["panels"][0]["options"]["content"]
     price_panel = next(panel for panel in dashboard["panels"] if panel["id"] == 3)
     volume_panel = next(panel for panel in dashboard["panels"] if panel["id"] == 4)
+    age_panel = next(panel for panel in dashboard["panels"] if panel["id"] == 2)
     assert "${symbol:text}" in price_panel["description"]
     assert "${volume_symbol:text}" in volume_panel["description"]
     assert price_panel["title"] == "${symbol:raw}: price"
     assert volume_panel["title"].startswith("${volume_symbol:raw}:")
+    assert age_panel["type"] == "table"
+    assert "sort(columns: [\"Symbol\"])" in age_panel["targets"][0]["query"]
     assert dashboard["annotations"]["list"] == [], "No internal Grafana datasource is needed"
     home = grafana_request("/api/dashboards/home")
     assert (home.get("dashboard", {}).get("uid") == dashboard["uid"]
@@ -95,6 +99,11 @@ def verify_once():
         elif title in ("Received ticks/min (last 60s)", "Received ticks per minute"):
             assert any(value > 0 for frame in frames for column in frame["data"]["values"]
                        for value in column if isinstance(value, (int, float))), (title, frames)
+        elif title == "Time since last tick":
+            values = [value for frame in frames for column in frame["data"]["values"]
+                      for value in column]
+            assert any(isinstance(value, str) and value.startswith("SYNTH-") for value in values)
+            assert any(isinstance(value, (int, float)) and value >= 0 for value in values)
         else:
             fields = [field for frame in frames for field in frame["schema"]["fields"]
                       if field["type"] == "number"]

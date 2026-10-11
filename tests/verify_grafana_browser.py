@@ -77,6 +77,7 @@ def main():
                         and "NVDA: price" in body
                         and "Received ticks/min (last 60s)" in body
                         and "Received ticks per minute" in body
+                        and "Symbol\nAge" in body
                         and "No data" in body
                         and "Waiting for ticks" not in body):
                     break

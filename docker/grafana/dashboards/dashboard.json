@@ -8,9 +8,9 @@
     "yahoo-finance",
     "market-data"
   ],
-  "timezone": "utc",
+  "timezone": "browser",
   "schemaVersion": 39,
-  "version": 9,
+  "version": 10,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
@@ -31,7 +31,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\nMarket, instrument and regular local session are in each ticker chart’s **info bubble**. Empty price charts intentionally keep sleeping markets visible; unavailable volume charts are omitted. Holidays, special sessions, DST and Yahoo delays can change coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\nCharts use your browser timezone (`${__timezone}`); switch the time picker to UTC whenever preferred. Info bubbles identify exchange-local regular sessions. Empty price charts intentionally keep sleeping markets visible; unavailable volume charts are omitted. Holidays, special sessions, DST and Yahoo delays can change coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },
@@ -319,8 +319,8 @@
     {
       "id": 2,
       "title": "Time since last tick",
-      "type": "stat",
-      "description": "Age of the latest Yahoo timestamp in the selected range. Closed markets naturally become stale. No ticks in range means no data.",
+      "type": "table",
+      "description": "Scrollable age table for the latest Yahoo timestamp per observed symbol in the selected range. Closed markets naturally become stale; symbols without a tick in range have no row.",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -332,32 +332,25 @@
         "y": 15
       },
       "fieldConfig": {
-        "defaults": {
-          "displayName": "${__field.labels.id}",
-          "unit": "s",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Age"
+            },
+            "properties": [
               {
-                "color": "green",
-                "value": null
+                "id": "unit",
+                "value": "s"
               },
               {
-                "color": "orange",
-                "value": 60
-              },
-              {
-                "color": "red",
-                "value": 300
+                "id": "decimals",
+                "value": 1
               }
             ]
-          },
-          "noValue": "Waiting for ticks"
-        },
-        "overrides": []
+          }
+        ]
       },
       "targets": [
         {
@@ -366,28 +359,41 @@
             "type": "influxdb",
             "uid": "yliveticker-influxdb"
           },
-          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => r.id =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> last()\n  |> map(fn: (r) => ({r with _value: float(v: uint(v: now()) - uint(v: r._time)) / 1000000000.0}))"
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => r.id =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> map(fn: (r) => ({Symbol: r.id, Age: float(v: uint(v: now()) - uint(v: r._time)) / 1000000000.0}))\n  |> group()\n  |> sort(columns: [\"Symbol\"])"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "Symbol": 0,
+              "Age": 1
+            },
+            "renameByName": {}
+          }
         }
       ],
       "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
           ],
+          "countRows": false,
           "fields": ""
-        },
-        "textMode": "value_and_name",
-        "colorMode": "value",
-        "graphMode": "none",
-        "orientation": "auto"
+        }
       }
     },
     {
       "id": 3,
       "title": "${symbol:raw}: price",
       "type": "timeseries",
-      "description": "${symbol:text}. Last observed price per display window, in the instrument’s quote currency. This panel stays visible as No data when the market is closed or silent. Holidays, special sessions, DST and Yahoo delays can change observed coverage.",
+      "description": "${symbol:text}. Session times are exchange-local; chart timestamps use `${__timezone}`. Last observed price per display window, in the instrument’s quote currency. This panel stays visible as No data when the market is closed or silent. Holidays, special sessions, DST and Yahoo delays can change observed coverage.",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -458,7 +464,7 @@
       "id": 4,
       "title": "${volume_symbol:raw}: reported session volume (cumulative)",
       "type": "timeseries",
-      "description": "${volume_symbol:text}. Positive Yahoo dayVolume values as received. This is cumulative session volume, not per-candle or interval volume. Instruments without meaningful dayVolume are omitted rather than showing a misleading zero.",
+      "description": "${volume_symbol:text}. Session times are exchange-local; chart timestamps use `${__timezone}`. Positive Yahoo dayVolume values as received. This is cumulative session volume, not per-candle or interval volume. Instruments without meaningful dayVolume are omitted rather than showing a misleading zero.",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"

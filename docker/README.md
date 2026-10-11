@@ -26,12 +26,14 @@ Open **[Grafana at localhost:3000](http://localhost:3000)**. The ticker dashboar
 is the home page and appears under **Dashboards → yliveticker**. You can also use
 [its permanent URL](http://localhost:3000/d/yliveticker-dashboard).
 The top of the dashboard identifies the active feed and distinguishes synthetic
-prices from Yahoo quotes. Each price and available-volume chart's info bubble
-identifies its symbol, market, instrument and regular local trading session;
-`FPH.NZ` is explicitly identified as **New Zealand (NZX)**. The symbol selector
-always contains the default watchlist and also discovers additional stored
-symbols from the displayed time range. The default range is one hour so delayed
-quotes—such as New Zealand—remain visible.
+prices from Yahoo quotes. Chart timestamps default to the viewing browser's
+timezone; use Grafana's time picker to switch to UTC or another IANA timezone.
+Each price and available-volume chart's info bubble identifies its symbol,
+market, instrument and exchange-local regular session; `FPH.NZ` is explicitly
+identified as **New Zealand (NZX)**. The symbol selector always contains the
+default watchlist and also discovers additional stored symbols from the
+displayed time range. The default range is one hour so delayed quotes—such as
+New Zealand—remain visible.
 
 The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
 `TICKER_SYNTHETIC=1` has no effect there. Use the PR branch to try this quickstart.
@@ -41,15 +43,16 @@ The dashboard provides:
 - Active feed and stored tick count, queried from InfluxDB.
 - A rolling received-ticks-per-minute value and one-minute bar chart. These use
   collector receipt time rather than Yahoo's potentially delayed event time.
-- Latest observed prices and the age of each symbol's last tick.
+- Latest observed prices and a scrollable table of last-tick ages.
 - A symbol selector and separate price charts for each selected symbol. Every
   default ticker gets a panel, so closed or silent markets show **No data**
   instead of disappearing.
 - Positive **cumulative session volume** (`dayVolume`), not interval/candle
   volume. Yahoo's missing/unsupported volume arrives as zero for some assets;
   the quickstart treats it as unavailable and omits those volume panels.
-- Five-second refresh and UTC timestamps. Prices remain in each symbol's quote
-  currency; they are not converted into a common currency.
+- Five-second refresh and browser-local chart timestamps, with UTC selectable
+  in Grafana's time picker. Prices remain in each symbol's quote currency; they
+  are not converted into a common currency.
 
 ## Choose symbols
 
