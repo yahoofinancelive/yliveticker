@@ -5,7 +5,7 @@ services:
     # keep that metadata compatible instead of silently downgrading to 2.7.
     image: influxdb:2.9.1
     ports:
-      - "127.0.0.1:8086:8086"
+      - "127.0.0.1:${INFLUX_PORT:-8086}:8086"
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: admin
@@ -36,10 +36,13 @@ services:
       INFLUX_URL: http://influxdb:8086
       INFLUX_TOKEN: ${INFLUX_TOKEN:-my-super-secret-auth-token}
       # Global live watchlist: 24/7 crypto plus a weekday east-to-west market handoff.
-      TICKER_SYMBOLS: ${TICKER_SYMBOLS:-BTC-USD EURUSD=X GC=F FPH.NZ BHP.AX 7203.T 0700.HK D05.SI RELIANCE.NS EMAAR.AE NPN.JO SAP.DE HSBA.L AAPL NVDA SHOP.TO VALE3.SA}
+      TICKER_SYMBOLS: ${TICKER_SYMBOLS:-}
       # Exercise the real package path by default; the synthetic test feed is opt-in.
       TICKER_SYNTHETIC: ${TICKER_SYNTHETIC:-0}
       TICKER_MAX_CONNECTIONS: ${TICKER_MAX_CONNECTIONS:-4}
+      TICKER_SYNTHETIC_SILENT: ${TICKER_SYNTHETIC_SILENT:-}
+      TICKER_SYNTHETIC_DELAY_SECONDS: ${TICKER_SYNTHETIC_DELAY_SECONDS:-0}
+      TICKER_METRICS_JSON: /tmp/yliveticker-status.json
     depends_on:
       influxdb:
         condition: service_healthy
@@ -51,10 +54,24 @@ services:
       retries: 12
       start_period: 20s
 
+  dashboard-init:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    # Only the one-shot generator needs permission to populate the shared volume.
+    user: "0:0"
+    entrypoint: ["python", "-m", "yliveticker.dashboard"]
+    command: ["--output", "/dashboards/dashboard.json"]
+    environment:
+      TICKER_SYMBOLS: ${TICKER_SYMBOLS:-}
+      TICKER_SYNTHETIC: ${TICKER_SYNTHETIC:-0}
+    volumes:
+      - generated_dashboards:/dashboards
+
   grafana:
     image: grafana/grafana:12.4
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
       GF_AUTH_ANONYMOUS_ENABLED: "true"
@@ -65,8 +82,10 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - generated_dashboards:/etc/grafana/dashboards:ro
     depends_on:
+      dashboard-init:
+        condition: service_completed_successfully
       influxdb:
         condition: service_healthy
     healthcheck:
@@ -80,3 +99,4 @@ volumes:
   influxdb_data:
   influxdb_config:
   grafana_data:
+  generated_dashboards:

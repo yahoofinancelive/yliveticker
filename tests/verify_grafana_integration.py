@@ -42,11 +42,11 @@ def verify_once():
     assert dashboard["templating"]["list"][0]["includeAll"]
     symbol_variable = dashboard["templating"]["list"][0]
     volume_variable = dashboard["templating"]["list"][1]
-    assert '{_value: "NVDA"}' in symbol_variable["query"]
-    assert "NVDA · United States (Nasdaq)" in symbol_variable["query"]
-    assert "FPH.NZ · New Zealand (NZX)" in symbol_variable["query"]
-    assert 'then "7203.T · Japan"' in symbol_variable["query"]
-    assert "regular sessions UTC 00:00–02:30 and 03:30–06:30" in symbol_variable["query"]
+    assert '{_value: "SYNTH-NVDA"}' in symbol_variable["query"]
+    assert "SYNTH-NVDA · Synthetic test · United States" in symbol_variable["query"]
+    assert "14:30–21:00 UTC" in symbol_variable["query"]
+    assert "13:30–20:00 UTC" in symbol_variable["query"]
+    assert "${symbol:regex}" in volume_variable["query"]
     assert symbol_variable["regex"] == volume_variable["regex"]
     assert "| Yahoo symbol | Market / instrument |" not in dashboard["panels"][0]["options"]["content"]
     assert not any(panel.get("title") == "Latest price" for panel in dashboard["panels"])
@@ -87,7 +87,7 @@ def verify_once():
         query = query.replace("${volume_symbol:regex}", "SYNTH-.*")
         now = int(time.time() * 1000)
         result = grafana_request("/api/ds/query", {
-            "from": str(now - 900000), "to": str(now),
+            "from": str(now - 3600000), "to": str(now),
             "queries": [{
                 "refId": "A", "datasource": {"type": "influxdb", "uid": datasource["uid"]},
                 "query": query, "intervalMs": 5000, "maxDataPoints": 1000,
@@ -126,6 +126,20 @@ def verify_once():
                        and field.get("labels", {}).get("currency") == "USD"
                        for field in fields), (title, fields)
         print("PASS:", title)
+
+    # A silent selected symbol must not leak another ticker's available volume.
+    query = volume_variable["query"].replace("${symbol:regex}", "SYNTH-NVDA.*")
+    now = int(time.time() * 1000)
+    result = grafana_request("/api/ds/query", {
+        "from": str(now - 3600000), "to": str(now), "queries": [{
+            "refId": "A", "datasource": {"type": "influxdb", "uid": datasource["uid"]},
+            "query": query, "intervalMs": 5000, "maxDataPoints": 1000,
+        }],
+    })["results"]["A"]
+    assert not result.get("error"), result
+    values = [value for frame in result.get("frames", []) for column in frame["data"]["values"] for value in column]
+    assert not any(isinstance(v, str) and "SYNTH-BTC-USD" in v for v in values), values
+    print("PASS: volume variable respects the selected silent symbol")
 
 
 def verify_legacy():

@@ -34,24 +34,24 @@ def main():
                     queries.extend(request.post_data_json.get("queries", []))
 
             page.on("request", record)
-            page.goto(url + path, wait_until="networkidle")
+            page.goto(url + path, wait_until="domcontentloaded")
             page.get_by_text("Stored ticks (selected range)", exact=True).wait_for()
+            page.get_by_text("Waiting for ticks", exact=True).wait_for()
             body = page.locator("body").inner_text()
             assert "Waiting for ticks" in body, "This test must open before the first collector tick"
             # Grafana lazily renders repeated panels. Scroll once to prove that a
             # configured sleeping ticker exists as an intentional empty chart.
             page.mouse.wheel(0, 10000)
-            page.wait_for_timeout(500)
+            page.get_by_role("heading", name="SYNTH-NVDA · Synthetic test · United States: price", exact=True).wait_for()
             body = page.locator("body").inner_text()
-            assert "NVDA · United States: price" in body and "No data" in body, body
+            assert "SYNTH-NVDA · Synthetic test · United States: price" in body and "No data" in body, body
             assert "Latest price" not in body, body
             nvda_panel = page.get_by_role("region").filter(
-                has=page.get_by_role("heading", name="NVDA · United States: price"),
+                has=page.get_by_role("heading", name="SYNTH-NVDA · Synthetic test · United States: price"),
             )
             nvda_panel.locator('[data-testid="icon-info-circle"]').hover()
             page.get_by_text(
-                "NVDA · United States (Nasdaq) · NVIDIA · regular session UTC "
-                "13:30–20:00 during EDT / 14:30–21:00 during EST.",
+                "14:30–21:00 UTC (January offset); 13:30–20:00 UTC (July offset)",
                 exact=False,
             ).wait_for()
             page.mouse.wheel(0, -10000)
@@ -74,10 +74,10 @@ def main():
                 page.wait_for_timeout(250)
                 body = page.locator("body").inner_text()
                 if ("Synthetic test feed" in body
-                        and "SYNTH-BTC-USD: price" in body
-                        and "SYNTH-BTC-USD: reported session volume (cumulative)" in body
+                        and "SYNTH-BTC-USD · Synthetic test · Global crypto: price" in body
+                        and "SYNTH-BTC-USD · Synthetic test · Global crypto: reported session volume (cumulative)" in body
                         and "SYNTH-BTC-USD · USD" in body
-                        and "NVDA · United States: price" in body
+                        and "SYNTH-NVDA · Synthetic test · United States: price" in body
                         and "Received ticks/min (last 60s)" in body
                         and "Received ticks per minute" in body
                         and "No data" in body
@@ -87,8 +87,8 @@ def main():
                     raise AssertionError("Dashboard did not populate automatically:\n" + body)
                 page.wait_for_timeout(1000)
             for title in (
-                "SYNTH-BTC-USD: price",
-                "SYNTH-BTC-USD: reported session volume (cumulative)",
+                "SYNTH-BTC-USD · Synthetic test · Global crypto: price",
+                "SYNTH-BTC-USD · Synthetic test · Global crypto: reported session volume (cumulative)",
             ):
                 panel = page.get_by_role("region").filter(
                     has=page.get_by_role("heading", name=title),
@@ -96,12 +96,28 @@ def main():
                 assert "SYNTH-BTC-USD · USD" in panel.inner_text(), panel.inner_text()
             page.mouse.wheel(0, -10000)
             page.wait_for_timeout(500)
-            age_table = page.get_by_role("region").filter(
+            age_panel = page.get_by_role("region").filter(
                 has=page.get_by_role("heading", name="Time since last tick"),
-            ).inner_text()
-            assert "Symbol\nAge" in age_table and "SYNTH-BTC-USD" in age_table, age_table
+            )
+            expected_state = ("Receiving delayed quotes" if float(os.getenv(
+                "TICKER_SYNTHETIC_DELAY_SECONDS", "0")) > 60 else "Receiving")
+            age_panel.get_by_role("gridcell", name=expected_state, exact=True).wait_for()
+            age_table = age_panel.inner_text()
+            assert all(value in age_table for value in ("Symbol", "Receipt age", "Quote age", "SYNTH-BTC-USD", "SYNTH-NVDA")), age_table
+            if float(os.getenv("TICKER_SYNTHETIC_DELAY_SECONDS", "0")) > 60:
+                assert "Receiving delayed quotes" in age_table, age_table
             print("PASS: data populated and sleeping default symbols stayed visible:",
                   page.url, flush=True)
+
+        # Restrict Symbols to the silent ticker: no BTC volume series may remain.
+        from urllib.parse import urlencode
+        pages[0].goto(url + "/d/yliveticker-dashboard?" + urlencode({
+            "var-symbol": "SYNTH-NVDA · Synthetic test · United States",
+            "from": "now-1h", "to": "now", "refresh": "5s",
+        }), wait_until="domcontentloaded")
+        pages[0].get_by_role("heading", name="SYNTH-NVDA · Synthetic test · United States: price", exact=True).wait_for()
+        assert pages[0].get_by_role("heading", name="SYNTH-BTC-USD · Synthetic test · Global crypto: price", exact=True).count() == 0
+        print("PASS: selection keeps silent price chart and excludes unselected symbols", flush=True)
 
         assert queries, "Browser did not issue datasource queries"
         assert all(query.get("datasource", {}).get("uid") == "yliveticker-influxdb"
@@ -111,7 +127,7 @@ def main():
         screenshot.parent.mkdir(parents=True, exist_ok=True)
         # Show a useful slice of actual collected history in the documentation image.
         pages[1].wait_for_timeout(15000)
-        pages[1].goto(url + "/d/yliveticker-dashboard?from=now-1m&to=now", wait_until="networkidle")
+        pages[1].goto(url + "/d/yliveticker-dashboard?from=now-1h&to=now", wait_until="domcontentloaded")
         pages[1].wait_for_timeout(5000)
         pages[1].screenshot(path=str(screenshot), full_page=True)
         print("PASS: browser queries use InfluxDB exclusively; no browser errors", flush=True)

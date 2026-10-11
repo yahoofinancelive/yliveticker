@@ -7,7 +7,8 @@
 
 Stream Yahoo Finance prices into **Python, pandas, time-series databases and
 Grafana**, or watch them directly in your terminal. Focused on Yahoo's WebSocket
-feed since 2020.
+feed since 2020. **This is an unofficial endpoint: no availability, timeliness,
+completeness, accuracy or continued compatibility promises.**
 
 ## InfluxDB + Grafana quickstart
 
@@ -36,8 +37,8 @@ client. Its east-to-west watchlist covers New Zealand (`FPH.NZ`), Australia
 (`RELIANCE.NS`), Dubai (`EMAAR.AE`), South Africa (`NPN.JO`), Frankfurt/Xetra
 (`SAP.DE`), London (`HSBA.L`), and the Americas (`AAPL`, `NVDA`, `SHOP.TO`,
 `VALE3.SA`), plus `BTC-USD`, `EURUSD=X`, and gold futures (`GC=F`). The dashboard
-shows the active feed, stored tick count, latest prices, tick freshness, separate
-charts and cumulative volume.
+shows persisted receipts, stored quote count, per-symbol receipt/quote ages,
+separate price charts and reported cumulative volume.
 The readiness script checks that a recent live tick actually reached InfluxDB
 before reporting success. It also works with Compose versions that do not support
 `--wait`.
@@ -57,8 +58,8 @@ market hours. Put `TICKER_SYNTHETIC=1` in `docker/.env` only for pipeline testin
 ![Grafana dashboard showing global live prices, tick freshness and per-symbol charts](docs/images/grafana-dashboard.png)
 
 *The default quickstart connects to Yahoo. The exchange sequence gives broad
-weekday coverage, while BTC supplies true 24/7 ticks. Closed exchanges begin
-populating when their next trading sessions open. The one-hour default dashboard
+weekday observation opportunities; crypto has no scheduled daily closure.
+Updates for any symbol can still be delayed or absent. The one-hour default dashboard
 range keeps delayed exchange quotes, including New Zealand, visible.*
 
 **[Quickstart settings, synthetic test feed and troubleshooting →](docker/README.md)**
@@ -76,20 +77,22 @@ range keeps delayed exchange quotes, including New Zealand, visible.*
 The core client is lightweight and blocking, with automatic reconnection and
 WebSocket pings. Large watchlists automatically use a bounded connection pool.
 Optional dependencies add the CLI, pandas and database drivers.
-The protobuf decoder supports modern Protobuf versions, including 4.x/5.x/7.x.
+The protobuf decoder is tested with 3.20.3, 4.x, 5.x, 6.x and 7.x runtimes.
 
 ### Why a dedicated streaming toolkit?
 
 [yfinance](https://github.com/ranaroussi/yfinance) covers a broad range of Yahoo
 Finance data and also offers WebSocket clients. Choose `yliveticker` when you
 want the focused **tick → storage → visualization** workflow, bundled database
-sinks, pandas collection or a terminal watchlist. Its current Python interface
-uses callbacks; a native asyncio iterator and runtime subscription changes are
-not part of the current API.
+sinks, per-symbol diagnostics, bounded pooling, pandas collection or a terminal
+watchlist. Callback and async interfaces share the same pool. Streaming and async
+APIs alone are not unique to this package. See [product direction and evidence](docs/PRODUCT_DIRECTION.md).
 
 ## Installation
 
-Python 3.7 or newer is required. Optional drivers may require a newer Python.
+Python 3.10 or newer is required; CI tests 3.10–3.12. This corrects the previous
+untested Python 3.7 claim. Protobuf 3.20.3–7.x is accepted; optional drivers can
+impose additional requirements.
 
 ```bash
 python -m pip install yliveticker
@@ -174,10 +177,34 @@ pooling does not solve a slow sink or provide durable replay. `close()` stops al
 sockets; `run()` drains queued events during normal shutdown. Frames arriving
 after shutdown starts can be discarded and are counted. Ctrl+C or a callback
 exception that escapes the error handler can interrupt draining. A client can
-be run only once; create a new client to restart or change subscriptions.
+be run only once; create a new client to restart. Use `client.subscribe(["MSFT"])`
+and `client.unsubscribe(["AAPL"])` while running to update the desired watchlist.
+Already queued ticks can still arrive after unsubscribe. A successful send is not
+an acknowledgement from Yahoo. Failed sends raise; desired state is retried on
+reconnection. Capacity is checked before changing subscriptions.
 
 The CLI uses the same pool. Override its bounds with
 `--symbols-per-connection 100 --max-connections 6` when necessary.
+
+### Async iteration
+
+```python
+import asyncio
+from yliveticker import AsyncYLiveTicker
+
+async def main():
+    async with AsyncYLiveTicker(["BTC-USD"], queue_size=100) as feed:
+        await feed.subscribe(["ETH-USD"])
+        async for tick in feed:
+            print(tick["id"], tick["price"])
+            break  # Context exit closes the pool, including a blocked producer.
+
+asyncio.run(main())
+```
+
+Use `await feed.unsubscribe(...)` and `await feed.close()` as needed. Unread async
+items are discarded on close. Slow consumers backpressure the bounded queues;
+there is no replay of missed upstream updates.
 
 ## pandas and OHLCV
 
@@ -201,9 +228,13 @@ for symbol, candles in series.get_ohlcv(interval="1min").items():
     print(symbol, candles)
 ```
 
-The current OHLCV `volume` column is the last observed cumulative `dayVolume`
-in each interval, **not interval traded volume**. The Grafana dashboard labels
-that same value as cumulative session volume.
+`get_ohlcv()` returns UTC-indexed OHLC prices and **`session_volume`**, the last
+positive cumulative `dayVolume` in an interval—not interval traded volume. The
+old misleading `volume` column is renamed; update downstream code accordingly.
+Unknown/zero volume stays missing, and resets are not interpreted as trades.
+Collection retains 100,000 points by default. Set `YTimeSeries(max_points=...)`
+or explicitly opt into unbounded retention with `max_points=None`.
+`evicted_points` counts records removed by the retention bound.
 
 ## Database sinks
 
@@ -232,8 +263,14 @@ Stop any existing Docker collector first to avoid duplicate writers. The
 settings and `--synthetic`, waits for database readiness and flushes on shutdown.
 See the [quickstart guide](docker/README.md) for credentials and lifecycle commands.
 
-Sinks batch writes in memory. Failed batches are logged, without durable replay;
-use an appropriate durable pipeline if your application requires lossless ingestion.
+Sinks batch in memory, retain failed batches and retry with exponential backoff.
+The default buffer holds at most 10,000 ticks. At capacity `on_ticker` raises
+`BufferError`; `diagnostics` records accepted, written, pending, rejected and
+failed writes. `stop()` attempts a final flush and raises `SinkWriteError` if it
+fails. Inspect these errors; they are not a durable queue. Crashes lose buffered
+data and retries can duplicate records. Sink counts reflect driver success, not
+independently verified durability. Configure `max_buffer_size`, `retry_interval`
+and `max_retry_interval` when constructing a sink.
 
 ## Client configuration
 
@@ -250,12 +287,13 @@ use an appropriate durable pipeline if your application requires lossless ingest
 | `symbols_per_connection` | `100` | Bucket size, from 1 to 100 unique symbols. |
 | `max_connections` | `4` | Maximum sockets; exceeding capacity raises `ValueError`. |
 | `queue_size` | `1000` | Maximum pending callback events; must be positive. |
+| `include_receipt_time` | `False` | Add `_received_at_ns` captured at the socket, separate from Yahoo event time. |
 | `start` | `True` | Stream in the constructor; set `False` and call `run()` to start later. |
 
 ## Data availability
 
 Yahoo's WebSocket endpoint is unofficial. Updates can be delayed, interrupted
-or absent while a market is closed. A successful synthetic quickstart check
+or absent, even during regular market hours. It may change or disappear without notice. A successful synthetic quickstart check
 verifies the local pipeline; it does not verify Yahoo's live feed. Check Yahoo's
 applicable terms and data entitlements for your intended use.
 

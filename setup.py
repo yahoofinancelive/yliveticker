@@ -18,7 +18,8 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=['protobuf>=3.11.0', 'websocket-client>=1.6.0'],
+    install_requires=['protobuf>=3.20.3,<8', 'websocket-client>=1.6.0', 'tzdata'],
+    package_data={'yliveticker': ['dashboard_template.json', 'yaticker.proto']},
     extras_require={
         'pandas': ['pandas'],
         'cli': ['rich', 'prompt_toolkit'],
@@ -37,5 +38,5 @@ setuptools.setup(
             'yliveticker=yliveticker.cli:main',
         ],
     },
-    python_requires='>=3.7'
+    python_requires='>=3.10'
 )

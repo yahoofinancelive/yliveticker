@@ -12,6 +12,7 @@ class TestInfluxDBSink(unittest.TestCase):
         mock_instance.write_api.return_value = mock_write_api
         
         sink = InfluxDBSink(url="http://localhost:8086", token="token", org="org", bucket="bucket")
+        self.addCleanup(sink.stop)
         
         # Sample ticker message
         msg = {
@@ -55,6 +56,7 @@ class TestInfluxDBSink(unittest.TestCase):
     def test_zero_volume_is_treated_as_unavailable(self, MockClient):
         mock_write_api = MockClient.return_value.write_api.return_value
         sink = InfluxDBSink(url="http://localhost:8086", token="token", org="org", bucket="bucket")
+        self.addCleanup(sink.stop)
 
         sink.write_batch([{
             'id': 'EURUSD=X',
@@ -75,6 +77,7 @@ class TestInfluxDBSink(unittest.TestCase):
     def test_missing_currency_does_not_create_an_empty_tag(self, MockClient):
         mock_write_api = MockClient.return_value.write_api.return_value
         sink = InfluxDBSink(url="http://localhost:8086", token="token", org="org", bucket="bucket")
+        self.addCleanup(sink.stop)
 
         sink.write_batch([{
             'id': 'UNKNOWN',

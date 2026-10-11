@@ -24,7 +24,20 @@
   UIDs without deleting ticks. Pin InfluxDB 2.9.1 so volumes created by the old
   `influxdb:latest` remain schema-compatible.
 - Update the README, configuration guide, screenshot and integration checks.
-- Require `websocket-client>=1.6.0` and Python 3.7 or newer for the connection API.
+- Require Python 3.10+ and protobuf 3.20.3–7.x; regenerate bindings with protoc
+  3.20.3 and test runtime majors independently. The old Python 3.7 claim was untested.
+- Add runtime subscribe/unsubscribe and a bounded async iterator over the same pool.
+- Fix QuestDB millisecond-to-nanosecond conversion and rollback failed PostgreSQL
+  transactions before retry. Retain failed sink batches in bounded memory, expose
+  counters, reject overflow explicitly and raise on failed shutdown flushes.
+- Separate receipt freshness from delayed quote age; expose per-symbol observations,
+  connection state and local-only run metrics. Do not infer upstream support from silence.
+- Generate collector/dashboard metadata from one registry, include custom silent
+  symbols, and apply Symbols selection to volume panels too.
+- Rename pandas `volume` to `session_volume`, use UTC indices and bound retention
+  to 100,000 points by default (`max_points=None` explicitly disables the bound).
+- Document unofficial-feed limitations and evidence-led product direction; add a
+  manual live observation workflow separate from deterministic merge checks.
 
 The 100-symbol boundary was observed in live tests, rather than documented by
 Yahoo. Closed markets and inactive instruments can still produce no ticks.

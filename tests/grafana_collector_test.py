@@ -20,7 +20,7 @@ def test_compose_and_collector_default_to_live(monkeypatch):
     assert args.symbols == list(collector.DEFAULT_SYMBOLS)
     compose = (Path(__file__).parents[1] / "docker" / "docker-compose.yml").read_text()
     assert "TICKER_SYNTHETIC: ${TICKER_SYNTHETIC:-0}" in compose
-    assert "TICKER_SYMBOLS: ${TICKER_SYMBOLS:-" + " ".join(collector.DEFAULT_SYMBOLS) + "}" in compose
+    assert "TICKER_SYMBOLS: ${TICKER_SYMBOLS:-}" in compose
     workflow = (Path(__file__).parents[1] / ".github" / "workflows" / "grafana-quickstart.yml").read_text()
     assert "TICKER_SYMBOLS: BTC-USD" in workflow
 
@@ -111,6 +111,7 @@ def test_tick_check_requires_recent_records_in_the_configured_mode(synthetic, ex
         assert collector.check_ticks("url", "token", "org", "bucket", ["BTC-USD"], synthetic) == 1
         query = query_api.query.call_args.args[0]
         assert "range(start: -30s)" in query
+        assert 'r._measurement == "ticker_ingest" and r._field == "count"' in query
         assert 'set: ["' + expected + '"]' in query
         table = MagicMock()
         table.records = [object()]

@@ -10,6 +10,7 @@ import threading
 from collections import Counter
 
 import websocket
+import pytest
 
 from yliveticker import YLiveTicker
 from yliveticker.yaticker_pb2 import yaticker
@@ -39,7 +40,8 @@ def send_frame(stream, opcode, body):
     stream.flush()
 
 
-def test_real_transport_recovers_clean_close_without_restarting_other_bucket(monkeypatch):
+@pytest.mark.parametrize("reconnections, burst", [(1, 1), (8, 100)])
+def test_real_transport_recovers_clean_close_without_restarting_other_bucket(monkeypatch, reconnections, burst):
     monkeypatch.setenv("NO_PROXY", "127.0.0.1,localhost")
     monkeypatch.setenv("no_proxy", "127.0.0.1,localhost")
     subscriptions = Counter()
@@ -70,9 +72,10 @@ def test_real_transport_recovers_clean_close_without_restarting_other_bucket(mon
                 with subscription_lock:
                     subscriptions[symbol] += 1
                     count = subscriptions[symbol]
-                message = yaticker(id=symbol, price=123, time=count)
-                send_frame(self.wfile, 1, base64.b64encode(message.SerializeToString()))
-                if symbol == "BTC-USD" and count == 1:
+                for sequence in range(burst):
+                    message = yaticker(id=symbol, price=123, time=count * burst + sequence)
+                    send_frame(self.wfile, 1, base64.b64encode(message.SerializeToString()))
+                if symbol == "BTC-USD" and count <= reconnections:
                     send_frame(self.wfile, 8, struct.pack("!H", 1000))
                     return
                 while True:
@@ -100,11 +103,11 @@ def test_real_transport_recovers_clean_close_without_restarting_other_bucket(mon
 
     def on_tick(ws, tick):
         ticks[tick["id"]] += 1
-        if ticks["BTC-USD"] >= 2 and ticks["ETH-USD"] >= 1:
+        if ticks["BTC-USD"] >= (reconnections + 1) * burst and ticks["ETH-USD"] >= burst:
             pool.close()
 
     pool.on_ticker = on_tick
-    watchdog = threading.Timer(5, pool.close)
+    watchdog = threading.Timer(10, pool.close)
     watchdog.start()
     try:
         pool.run()
@@ -117,7 +120,7 @@ def test_real_transport_recovers_clean_close_without_restarting_other_bucket(mon
     # Some websocket-client versions also deliver a normal close as on_error.
     assert all(isinstance(error, websocket.WebSocketConnectionClosedException) and
                "code 1000" in str(error) for error in errors)
-    assert ticks == {"BTC-USD": 2, "ETH-USD": 1}
-    assert subscriptions == {"BTC-USD": 2, "ETH-USD": 1}
+    assert ticks == {"BTC-USD": (reconnections + 1) * burst, "ETH-USD": burst}
+    assert subscriptions == {"BTC-USD": reconnections + 1, "ETH-USD": 1}
     assert all(not worker.is_alive() for worker in pool._workers)
     assert pool.diagnostics["queue_depth"] == 0

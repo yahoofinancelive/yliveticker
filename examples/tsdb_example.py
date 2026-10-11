@@ -12,55 +12,16 @@ from influxdb_client import InfluxDBClient
 
 from yliveticker import YLiveTicker
 from yliveticker.sinks.influxdb import InfluxDBSink
+from yliveticker.instruments import DEFAULT_SYMBOLS, instrument
+from yliveticker.collector_monitor import CollectorMonitor
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_SYMBOLS = (
-    "BTC-USD",    # Global crypto (keeps the quickstart active around the clock)
-    "EURUSD=X",   # Global foreign exchange
-    "GC=F",       # Gold futures
-    "FPH.NZ",     # New Zealand
-    "BHP.AX",     # Australia
-    "7203.T",     # Japan
-    "0700.HK",    # Hong Kong
-    "D05.SI",     # Singapore
-    "RELIANCE.NS",  # India
-    "EMAAR.AE",   # Dubai
-    "NPN.JO",     # South Africa
-    "SAP.DE",     # Germany (Xetra/Frankfurt)
-    "HSBA.L",     # United Kingdom
-    "AAPL",       # United States
-    "NVDA",       # California issuer (trades on the US market schedule)
-    "SHOP.TO",    # Canada
-    "VALE3.SA",   # Brazil
-)
-
-SYNTHETIC_CURRENCIES = {
-    "BTC-USD": "USD",
-    "EURUSD=X": "USD",
-    "GC=F": "USD",
-    "FPH.NZ": "NZD",
-    "BHP.AX": "AUD",
-    "7203.T": "JPY",
-    "0700.HK": "HKD",
-    "D05.SI": "SGD",
-    "RELIANCE.NS": "INR",
-    "EMAAR.AE": "AED",
-    "NPN.JO": "ZAc",
-    "SAP.DE": "EUR",
-    "HSBA.L": "GBp",
-    "AAPL": "USD",
-    "NVDA": "USD",
-    "SHOP.TO": "CAD",
-    "VALE3.SA": "BRL",
-}
-
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "symbols", nargs="*",
-        default=os.getenv("TICKER_SYMBOLS", " ".join(DEFAULT_SYMBOLS)).split(),
+        default=(os.getenv("TICKER_SYMBOLS") or " ".join(DEFAULT_SYMBOLS)).split(),
         help="Yahoo symbols (default: TICKER_SYMBOLS or the global quickstart watchlist)",
     )
     parser.add_argument(
@@ -74,8 +35,10 @@ def parse_args(argv=None):
     )
     parser.add_argument(
         "--check", action="store_true",
-        help="Check that a configured symbol has a tick in InfluxDB within the last 30 seconds",
+        help="Check a persisted receipt from a configured symbol within 30 seconds (not quote age)",
     )
+    parser.add_argument("--metrics-json", default=os.getenv("TICKER_METRICS_JSON"),
+                        help="Write local run measurements to this JSON file; no telemetry is sent")
     args = parser.parse_args(argv)
     if not args.symbols:
         parser.error("Provide at least one symbol or set TICKER_SYMBOLS")
@@ -90,7 +53,7 @@ def check_ticks(url, token, org, bucket, symbols, synthetic):
     query = (
         "from(bucket: " + json.dumps(bucket) + ")\n"
         "  |> range(start: -30s)\n"
-        '  |> filter(fn: (r) => r._measurement == "ticker" and r._field == "price")\n'
+        '  |> filter(fn: (r) => r._measurement == "ticker_ingest" and r._field == "count")\n'
         "  |> filter(fn: (r) => contains(value: r.id, set: " + json.dumps(ids) + "))\n"
         "  |> last()"
     )
@@ -128,12 +91,15 @@ def stream_synthetic(sink, symbols):
     logger.warning("SYNTHETIC TEST FEED: not market data; symbols are prefixed SYNTH-")
     step = 0
     while True:
-        timestamp = int(time.time() * 1000)
+        # Deterministic CI can exercise delayed exchanges without calling Yahoo.
+        timestamp = int((time.time() - float(os.getenv("TICKER_SYNTHETIC_DELAY_SECONDS", "0"))) * 1000)
         for index, symbol in enumerate(symbols):
+            if symbol in os.getenv("TICKER_SYNTHETIC_SILENT", "").split():
+                continue
             base_price = (index + 1) * 100.0
             sink.on_ticker(None, {
                 "id": "SYNTH-" + symbol,
-                "currency": SYNTHETIC_CURRENCIES.get(symbol, "N/A"),
+                "currency": instrument(symbol).currency,
                 "price": base_price + math.sin(step / 10.0 + index) * base_price * 0.01,
                 "dayVolume": 10000 + step * 100,
                 "timestamp": timestamp,
@@ -163,21 +129,35 @@ def main(argv=None):
 
     previous_handler = signal.signal(signal.SIGTERM, stop)
     sink = None
+    monitor = None
+    client = None
     try:
         wait_for_influxdb(url, token, org, bucket)
         sink = InfluxDBSink(url=url, token=token, org=org, bucket=bucket, flush_interval=1.0)
+        monitor = CollectorMonitor(sink, args.symbols, args.synthetic, args.metrics_json)
+        monitor.start()
         if args.synthetic:
-            stream_synthetic(sink, args.symbols)
+            stream_synthetic(monitor, args.symbols)
         else:
             logger.info("Streaming %s into %s; press Ctrl+C to stop", ", ".join(args.symbols), bucket)
-            YLiveTicker(on_ticker=sink.on_ticker, ticker_names=args.symbols,
-                        max_connections=args.max_connections)
+            client = YLiveTicker(on_ticker=monitor.on_ticker, ticker_names=args.symbols,
+                                 max_connections=args.max_connections, start=False, include_receipt_time=True)
+            monitor.client = client
+            client.run()
     except KeyboardInterrupt:
         logger.info("Stopping collector and flushing buffered ticks...")
     finally:
-        if sink is not None:
-            sink.stop()
-        signal.signal(signal.SIGTERM, previous_handler)
+        try:
+            if client is not None:
+                client.close()
+            if monitor is not None:
+                monitor.stop()
+            if sink is not None:
+                sink.stop()
+        finally:
+            signal.signal(signal.SIGTERM, previous_handler)
+            if monitor is not None and args.metrics_json:
+                monitor.save_metrics()
 
 
 if __name__ == "__main__":

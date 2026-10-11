@@ -3,10 +3,8 @@ name: Grafana quickstart
 on:
   push:
     branches: [main]
-    paths: ['docker/**', '.dockerignore', 'yliveticker/**', 'examples/tsdb_example.py', 'setup.py', 'README.md', 'tests/fixtures/grafana-legacy/**', 'tests/verify_grafana_integration.py', 'tests/verify_grafana_browser.py', '.github/workflows/grafana-quickstart.yml']
   pull_request:
     branches: [main]
-    paths: ['docker/**', '.dockerignore', 'yliveticker/**', 'examples/tsdb_example.py', 'setup.py', 'README.md', 'tests/fixtures/grafana-legacy/**', 'tests/verify_grafana_integration.py', 'tests/verify_grafana_browser.py', '.github/workflows/grafana-quickstart.yml']
   workflow_dispatch:
 
 permissions:
@@ -19,7 +17,9 @@ jobs:
     env:
       TICKER_SYNTHETIC: '1'
       # Keep deterministic CI small; the product default remains the global live watchlist.
-      TICKER_SYMBOLS: BTC-USD
+      TICKER_SYMBOLS: BTC-USD NVDA
+      TICKER_SYNTHETIC_SILENT: NVDA
+      TICKER_SYNTHETIC_DELAY_SECONDS: '1200'
       COMPOSE_PROJECT_NAME: yliveticker-smoke
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +39,7 @@ jobs:
           docker rm -f legacy-grafana
       - name: Start the database and dashboard before the collector
         run: |
-          docker compose -f docker/docker-compose.yml up -d influxdb grafana
+          docker compose -f docker/docker-compose.yml up --build -d influxdb grafana
           sh docker/wait-for-stack.sh influxdb grafana
       - name: Install browser test dependencies
         run: |

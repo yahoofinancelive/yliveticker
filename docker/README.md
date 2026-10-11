@@ -1,7 +1,8 @@
 # yliveticker → InfluxDB → Grafana
 
-This local quickstart runs three services: a `yliveticker` collector, InfluxDB 2,
-and Grafana with an automatically provisioned datasource and dashboard.
+This local quickstart runs a `yliveticker` collector, InfluxDB 2, and Grafana,
+plus a one-shot dashboard generator. The collector and generated dashboard use
+the same instrument registry and `TICKER_SYMBOLS` setting.
 Docker Engine/Desktop with the Compose v2 plugin and an internet connection are
 required; no host Python installation or manual datasource setup is needed.
 
@@ -16,8 +17,9 @@ sh docker/wait-for-stack.sh
 **Default mode is the live Yahoo feed.** The collector uses a global watchlist
 through `yliveticker`, writes received ticks to **InfluxDB 2, bucket
 `ticker_data`**, and Grafana queries that bucket. The readiness script waits for a
-recent live tick in storage and Grafana readiness; a timeout reports a startup or
-upstream-feed failure.
+recently persisted receipt and Grafana readiness. Delayed quote timestamps do
+not fail this check. A timeout means no recent persisted receipt was observed;
+it is not proof that Yahoo or the collector is broken.
 It uses container health checks and works with older Compose v2 versions
 without the `--wait` flag. Set `QUICKSTART_TIMEOUT=300` when a longer wait is needed.
 The first build downloads images and Python dependencies.
@@ -31,9 +33,9 @@ timezone; use Grafana's time picker to switch to UTC or another IANA timezone.
 Each price and available-volume chart title identifies its country, while its
 info bubble gives the instrument and regular session directly in UTC. Markets
 that observe DST show both UTC schedules; `FPH.NZ` is explicitly identified as
-**New Zealand (NZX)**. The symbol selector always contains the
-default watchlist and also discovers additional stored symbols from the
-displayed time range. The default range is one hour so delayed quotes—such as
+**New Zealand**. The symbol selector contains exactly the configured watchlist,
+even when no data has ever arrived. Historical symbols from another configuration
+or synthetic run are not automatically mixed into the current watchlist. The default range is one hour so delayed quotes—such as
 New Zealand—remain visible.
 
 The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
@@ -44,9 +46,10 @@ The dashboard provides:
 - Active feed and stored tick count, queried from InfluxDB.
 - A rolling received-ticks-per-minute value and one-minute bar chart. These use
   collector receipt time rather than Yahoo's potentially delayed event time.
-- A full-width, scrollable table of last-tick ages.
+- A full-width, scrollable per-symbol table: receipt age, quote age, received/written
+  counts, connection state and observational status. Old heartbeats become unknown.
 - A symbol selector and separate price charts for each selected symbol. Every
-  default ticker gets a panel, so closed or silent markets show **No data**
+  configured ticker gets a panel, so closed or silent markets show **No data**
   instead of disappearing. Price and volume legends append the instrument's
   Yahoo quote-currency code (for example, `AAPL · USD` and `7203.T · JPY`).
 - Positive **cumulative session volume** (`dayVolume`), not interval/candle
@@ -84,8 +87,8 @@ These are real Yahoo instruments, not bundled sample records. Ordered from
 Auckland westward, their regular sessions provide broad weekday coverage, but
 they are not a guaranteed continuous feed: holidays, closed markets and Yahoo
 availability still apply. A West Coast company still trades on the US market
-schedule. `BTC-USD` supplies true 24/7 ticks; FX and gold futures bridge most of
-the weekday gaps. Some exchanges are delayed by Yahoo, so their stored event
+schedule. Crypto has no scheduled daily closure; FX and futures have near-continuous
+weekday sessions. None of this promises that Yahoo will send updates. Some exchanges are delayed by Yahoo, so their stored event
 timestamps can trail wall-clock time even while the market is open. The table
 shows regular full-day sessions; holidays, special/half-day sessions and daylight
 saving changes can alter them.
@@ -93,7 +96,7 @@ saving changes can alter them.
 On macOS/Linux, from the repository root:
 
 ```bash
-TICKER_SYMBOLS="BTC-USD NVDA EURUSD=X" docker compose -f docker/docker-compose.yml up -d
+TICKER_SYMBOLS="BTC-USD NVDA EURUSD=X" docker compose -f docker/docker-compose.yml up --build -d
 ```
 
 On Windows or to keep the setting between runs, put this in `docker/.env`:
@@ -102,10 +105,10 @@ On Windows or to keep the setting between runs, put this in `docker/.env`:
 TICKER_SYMBOLS=BTC-USD NVDA EURUSD=X
 ```
 
-Then run the original Compose command again. Every symbol in the built-in default
-watchlist remains available even without a tick in the selected range; additional
-previously stored symbols are discovered from that range. Select just the symbols
-you want to view. Closed markets naturally show older ticks or an empty **No data**
+Then run the original Compose command again. The one-shot generator rebuilds
+price panels for exactly this watchlist, including custom symbols that have never
+received a tick. Unknown metadata is labeled as unknown, not guessed. The volume
+selector follows the visible Symbols selection. Closed markets naturally show older ticks or an empty **No data**
 price chart.
 
 Live watchlists are deduplicated and pooled automatically, with at most 100
@@ -121,7 +124,7 @@ pooling cannot guarantee updates for an inactive instrument or closed market.
 The plain command connects to Yahoo. Yahoo's unofficial feed can be delayed or
 unavailable, and closed markets can be silent. Crypto usually updates outside
 stock-market hours. The collector is healthy only while a configured symbol has
-a tick within the last 30 seconds; an unhealthy collector can mean the upstream
+a persisted receipt within the last 30 seconds; an unhealthy collector can mean the upstream
 feed is silent, even if the process is running.
 
 To test the complete pipeline deterministically without relying on Yahoo or
@@ -139,8 +142,8 @@ stores dashboard settings; market ticks are stored in the InfluxDB volume.
 Put `TICKER_SYNTHETIC=0` or `TICKER_SYNTHETIC=1` in `docker/.env` to keep your choice between
 commands. A prefix such as `TICKER_SYNTHETIC=0` applies to just that invocation;
 running a plain command afterwards uses `.env` or the default live mode.
-Stored series remain visible within the selected time range. Select live or
-`SYNTH-*` symbols explicitly when switching modes.
+Switching modes regenerates the dashboard's configured symbol list. Old stored
+series remain in InfluxDB but are not mixed into the new dashboard selection.
 
 ## Upgrade an existing quickstart
 
@@ -173,8 +176,10 @@ docker compose -f docker/docker-compose.yml down -v
 
 SIGINT/SIGTERM stops the collector and flushes buffered ticks. The example uses
 one-second batches. Compose allows 30 seconds for pooled connections to close
-and the sink to flush before forcing termination. The existing sink logs write
-failures and does not replay failed batches; this quickstart is not a durable market-data queue.
+and the sink to attempt a flush before forcing termination. Failed batches are
+retained in a bounded in-memory retry buffer; overflow rejects new records and
+failed final flushes raise an explicit error. Crashes/forced stops lose memory;
+retries can duplicate records. This is not a durable market-data queue.
 
 ## Local settings
 
@@ -200,8 +205,18 @@ explicit destructive reset above to initialize a fresh quickstart.
 
 This stack intentionally stays on InfluxDB **2.x** because the sink and
 queries use its API and Flux. Do not change the image to `influxdb:latest` or
-InfluxDB 3. Grafana provisioning files are mounted read-only; commit dashboard
-changes to `grafana/dashboards/dashboard.json` to keep them across restarts.
+InfluxDB 3. Grafana provisioning and the generated dashboard are mounted read-only in Grafana.
+Edit `yliveticker/instruments.py`, `yliveticker/dashboard.py` and the packaged
+`dashboard_template.json`, then regenerate the checked-in default with:
+
+```bash
+python -m yliveticker.dashboard --output docker/grafana/dashboards/dashboard.json
+```
+
+`INFLUX_PORT` and `GRAFANA_PORT` can override host ports for isolated test stacks.
+Compose writes local measurements inside the collector; inspect them with
+`docker compose -f docker/docker-compose.yml exec collector cat /tmp/yliveticker-status.json`.
+No telemetry is sent. See [observations and limitations](../docs/PRODUCT_DIRECTION.md).
 
 ## Use a host Python collector
 

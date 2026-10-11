@@ -8,12 +8,14 @@ class TestTimescaleDBSink(unittest.TestCase):
     def test_write_batch(self, mock_connect):
         # Setup mock connection and cursor
         mock_conn = MagicMock()
+        mock_conn.closed = False
         mock_connect.return_value = mock_conn
         mock_cur = MagicMock()
         mock_conn.cursor.return_value.__enter__.return_value = mock_cur
         
         # Instantiate sink (this calls _create_table)
         sink = TimescaleDBSink(dsn="dbname=test user=test")
+        self.addCleanup(sink.stop)
         
         # Sample ticker message
         msg = {

@@ -45,7 +45,7 @@ while :; do
         case " $* " in
             *" collector "*) echo "Recent configured ticks verified in InfluxDB." ;;
         esac
-        echo "Dashboard: http://localhost:3000/d/yliveticker-dashboard"
+        echo "Dashboard: http://localhost:${GRAFANA_PORT:-3000}/d/yliveticker-dashboard"
         exit 0
     fi
     if [ "$(date +%s)" -ge "$deadline" ]; then
