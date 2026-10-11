@@ -9,26 +9,42 @@ Stream Yahoo Finance prices into **Python, pandas, time-series databases and
 Grafana**, or watch them directly in your terminal. Focused on Yahoo's WebSocket
 feed since 2020.
 
-## Yahoo → Grafana in three commands
+## InfluxDB + Grafana demo in three commands
 
 With [Docker Desktop or Docker Engine and Compose v2](https://docs.docker.com/compose/install/):
+
+**Before [PR #22](https://github.com/yahoofinancelive/yliveticker/pull/22) merges,
+check out `feat/pooling-and-grafana` before running Compose.** The older `main`
+Compose file does not start a collector and ignores `TICKER_DEMO`.
 
 ```bash
 git clone https://github.com/yahoofinancelive/yliveticker.git
 cd yliveticker
-docker compose -f docker/docker-compose.yml up --build -d
+docker compose -f docker/docker-compose.yml up --build -d --wait --wait-timeout 180
 ```
 
-Open **[the live dashboard](http://localhost:3000/d/yliveticker-dashboard)**.
-The collector, InfluxDB and Grafana start together; the datasource and dashboard
-are provisioned automatically. No host Python installation, API key or manual
-Grafana setup is required for this local example.
+Open **[Grafana](http://localhost:3000)** — the ticker dashboard is the home page.
+It is also listed under **Dashboards → yliveticker**, with a
+[direct dashboard link](http://localhost:3000/d/yliveticker-dashboard).
+The collector writes to **InfluxDB 2, bucket `ticker_data`**; Grafana reads those
+stored ticks through the provisioned InfluxDB datasource.
 
-The default watchlist is `BTC-USD ETH-USD AAPL`. Allow the first build to finish
-and a few seconds for ticks to arrive. Crypto usually updates outside stock
-market hours. The dashboard shows latest prices, tick freshness, separate price
-charts and cumulative session volume, with a symbol selector and five-second
-refresh.
+**The default is a synthetic demo**, so a fresh startup produces charts without
+Yahoo or open markets. `DEMO-BTC-USD`, `DEMO-ETH-USD` and `DEMO-AAPL` update every
+second. The dashboard shows the active feed, stored tick count, latest prices,
+tick freshness, separate charts and cumulative volume. `--wait` checks that
+recent ticks actually reached InfluxDB before the command succeeds.
+
+To collect **live Yahoo quotes**, explicitly switch modes:
+
+```bash
+TICKER_DEMO=0 docker compose -f docker/docker-compose.yml up --build -d
+```
+
+Live mode subscribes to `BTC-USD ETH-USD AAPL`. Yahoo's unofficial feed can be
+unavailable, and closed markets can be silent. Use `docker/.env` to persist your
+mode: `TICKER_DEMO=0` for live quotes or `TICKER_DEMO=1` for synthetic data.
+A setting before one command only applies to that command.
 
 ![Grafana dashboard showing latest prices, tick freshness and per-symbol charts](docs/images/grafana-demo.png)
 
@@ -40,7 +56,7 @@ refresh.
 
 | Goal | Start here |
 | --- | --- |
-| Live charts without writing Python | [Docker + Grafana](#yahoo--grafana-in-three-commands) |
+| Live charts without writing Python | [Docker + Grafana](#influxdb--grafana-demo-in-three-commands) |
 | A stock/crypto watchlist in your terminal | [CLI dashboard](#terminal-dashboard) |
 | Feed your own application with ticks | [Python callback](#python-callback) |
 | Collect DataFrames and aggregate candles | [pandas and OHLCV](#pandas-and-ohlcv) |

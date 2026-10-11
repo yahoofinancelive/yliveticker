@@ -88,3 +88,27 @@ def test_demo_is_explicitly_labeled_and_uses_yahoo_tick_fields():
     assert tick["price"] > 0
     assert tick["timestamp"] > 0
     assert tick["dayVolume"] >= 0
+
+
+@pytest.mark.parametrize("demo, expected", [(True, "DEMO-BTC-USD"), (False, "BTC-USD")])
+def test_tick_check_requires_recent_records_in_the_configured_mode(demo, expected):
+    with patch.object(collector, "InfluxDBClient") as client_type:
+        query_api = client_type.return_value.__enter__.return_value.query_api.return_value
+        query_api.query.return_value = []
+        assert collector.check_ticks("url", "token", "org", "bucket", ["BTC-USD"], demo) == 1
+        query = query_api.query.call_args.args[0]
+        assert "range(start: -30s)" in query
+        assert 'set: ["' + expected + '"]' in query
+        table = MagicMock()
+        table.records = [object()]
+        query_api.query.return_value = [table]
+        assert collector.check_ticks("url", "token", "org", "bucket", ["BTC-USD"], demo) == 0
+
+
+def test_check_failure_exits_without_starting_a_collector():
+    with patch.object(collector, "check_ticks", side_effect=RuntimeError("Unauthorized")), \
+            patch.object(collector, "InfluxDBSink") as sink, \
+            patch.object(collector, "YLiveTicker") as client:
+        assert collector.main(["--check", "--demo"]) == 1
+        sink.assert_not_called()
+        client.assert_not_called()

@@ -1,6 +1,7 @@
 """Stream Yahoo ticks into InfluxDB, or generate explicitly labeled demo data."""
 
 import argparse
+import json
 import logging
 import math
 import os
@@ -30,12 +31,37 @@ def parse_args(argv=None):
         "--max-connections", type=int, default=os.getenv("TICKER_MAX_CONNECTIONS", "4"),
         help="Maximum Yahoo connections (default: TICKER_MAX_CONNECTIONS or 4)",
     )
+    parser.add_argument(
+        "--check", action="store_true",
+        help="Check that a configured symbol has a tick in InfluxDB within the last 30 seconds",
+    )
     args = parser.parse_args(argv)
     if not args.symbols:
         parser.error("Provide at least one symbol or set TICKER_SYMBOLS")
     if args.max_connections < 1:
         parser.error("--max-connections must be positive")
     return args
+
+
+def check_ticks(url, token, org, bucket, symbols, demo):
+    """Verify storage, mode and freshness, without creating another collector."""
+    ids = ["DEMO-" + symbol if demo else symbol for symbol in symbols]
+    query = (
+        "from(bucket: " + json.dumps(bucket) + ")\n"
+        "  |> range(start: -30s)\n"
+        '  |> filter(fn: (r) => r._measurement == "ticker" and r._field == "price")\n'
+        "  |> filter(fn: (r) => contains(value: r.id, set: " + json.dumps(ids) + "))\n"
+        "  |> last()"
+    )
+    with InfluxDBClient(url=url, token=token, org=org, timeout=5000) as client:
+        tables = client.query_api().query(query)
+        if any(table.records for table in tables):
+            logger.info("Recent %s ticks verified in InfluxDB bucket %s",
+                        "demo" if demo else "live", bucket)
+            return 0
+    logger.error("No recent %s ticks in InfluxDB for %s; check collector logs",
+                 "demo" if demo else "live", ", ".join(ids))
+    return 1
 
 
 def wait_for_influxdb(url, token, org, bucket, timeout=90):
@@ -82,6 +108,13 @@ def main(argv=None):
     org = os.getenv("INFLUX_ORG", "yliveticker")
     bucket = os.getenv("INFLUX_BUCKET", "ticker_data")
 
+    if args.check:
+        try:
+            return check_ticks(url, token, org, bucket, args.symbols, args.demo)
+        except Exception as exc:
+            logger.error("InfluxDB tick check failed: %s", exc)
+            return 1
+
     # The blocking client returns on Ctrl+C; treat Docker's SIGTERM the same way.
     def stop(signum, frame):
         raise KeyboardInterrupt
@@ -106,4 +139,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

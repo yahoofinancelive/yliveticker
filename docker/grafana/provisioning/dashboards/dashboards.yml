@@ -1,11 +1,13 @@
 apiVersion: 1
 
 providers:
-  - name: 'Default'
+  - name: yliveticker
     orgId: 1
-    folder: ''
+    folder: yliveticker
     type: file
     disableDeletion: false
-    editable: true
+    editable: false
+    # Polling works across Docker Desktop bind mounts, including on macOS.
+    updateIntervalSeconds: 30
     options:
-      path: /var/lib/grafana/dashboards
+      path: /etc/grafana/dashboards

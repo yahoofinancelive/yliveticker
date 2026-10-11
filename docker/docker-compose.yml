@@ -34,11 +34,19 @@ services:
       INFLUX_URL: http://influxdb:8086
       INFLUX_TOKEN: ${INFLUX_TOKEN:-my-super-secret-auth-token}
       TICKER_SYMBOLS: ${TICKER_SYMBOLS:-BTC-USD ETH-USD AAPL}
-      TICKER_DEMO: ${TICKER_DEMO:-0}
+      # A fresh quickstart always has data, even when Yahoo is unavailable.
+      TICKER_DEMO: ${TICKER_DEMO:-1}
       TICKER_MAX_CONNECTIONS: ${TICKER_MAX_CONNECTIONS:-4}
     depends_on:
       influxdb:
         condition: service_healthy
+    healthcheck:
+      # A running Python process alone does not prove that ticks reach storage.
+      test: ["CMD", "python", "examples/tsdb_example.py", "--check"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
 
   grafana:
     image: grafana/grafana:12.4
@@ -49,15 +57,21 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/dashboard.json
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/dashboard.json
       INFLUX_TOKEN: ${INFLUX_TOKEN:-my-super-secret-auth-token}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
     depends_on:
       influxdb:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
 
 volumes:
   influxdb_data:

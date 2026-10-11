@@ -3,10 +3,10 @@ name: Grafana quickstart
 on:
   push:
     branches: [main]
-    paths: ['docker/**', '.dockerignore', 'yliveticker/**', 'examples/tsdb_example.py', 'setup.py', 'README.md', 'tests/verify_grafana_integration.py', '.github/workflows/grafana-quickstart.yml']
+    paths: ['docker/**', '.dockerignore', 'yliveticker/**', 'examples/tsdb_example.py', 'setup.py', 'README.md', 'tests/verify_grafana_integration.py', 'tests/verify_grafana_browser.py', '.github/workflows/grafana-quickstart.yml']
   pull_request:
     branches: [main]
-    paths: ['docker/**', '.dockerignore', 'yliveticker/**', 'examples/tsdb_example.py', 'setup.py', 'README.md', 'tests/verify_grafana_integration.py', '.github/workflows/grafana-quickstart.yml']
+    paths: ['docker/**', '.dockerignore', 'yliveticker/**', 'examples/tsdb_example.py', 'setup.py', 'README.md', 'tests/verify_grafana_integration.py', 'tests/verify_grafana_browser.py', '.github/workflows/grafana-quickstart.yml']
   workflow_dispatch:
 
 permissions:
@@ -18,17 +18,41 @@ jobs:
     timeout-minutes: 10
     env:
       TICKER_DEMO: '1'
+      COMPOSE_PROJECT_NAME: yliveticker-smoke
     steps:
       - uses: actions/checkout@v4
       - name: Validate Compose configuration
         run: docker compose -f docker/docker-compose.yml config --quiet
-      - name: Start the complete stack with synthetic ticks
-        run: docker compose -f docker/docker-compose.yml up --build -d
+      - name: Seed an existing Grafana database with the legacy datasource
+        run: |
+          docker compose -f docker/docker-compose.yml up -d --wait influxdb
+          mkdir -p "$RUNNER_TEMP/legacy-provisioning"
+          docker compose -f docker/docker-compose.yml run -d --no-deps --service-ports \
+            --name legacy-grafana \
+            -v "$RUNNER_TEMP/legacy-provisioning:/etc/grafana/provisioning:ro" \
+            -e GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH= grafana
+          python3 tests/verify_grafana_integration.py --seed-legacy
+          docker rm -f legacy-grafana
+      - name: Start the database and dashboard before the collector
+        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 180 influxdb grafana
+      - name: Install browser test dependencies
+        run: |
+          python3 -m pip install playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Open the empty dashboard, start collector and verify automatic rendering
+        run: python3 tests/verify_grafana_browser.py --start-collector
       - name: Verify writes, provisioning, symbol discovery and panel queries
         run: python3 tests/verify_grafana_integration.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: grafana-demo
+          path: junit/grafana-demo.png
       - name: Show service logs
         if: always()
         run: docker compose -f docker/docker-compose.yml logs --no-color
       - name: Stop stack and remove test volumes
         if: always()
-        run: docker compose -f docker/docker-compose.yml down -v
+        run: |
+          docker rm -f legacy-grafana 2>/dev/null || true
+          docker compose -f docker/docker-compose.yml down -v

@@ -13,6 +13,9 @@
   entire pool. Fix the CLI's ability to stop a running client and expose pool flags.
 - Add the Yahoo → InfluxDB 2 → Grafana Compose quickstart, provisioned dashboard,
   clearly labeled synthetic demo, readiness checks and collector shutdown flushing.
+- Default the Docker quickstart to clearly labeled synthetic data; check recent
+  InfluxDB writes for collector health and make the ticker dashboard the home page.
+  Migrate Grafana databases with legacy datasource UIDs without deleting ticks.
 - Update the README, configuration guide, screenshot and integration checks.
 - Require `websocket-client>=1.6.0` and Python 3.7 or newer for the connection API.
 

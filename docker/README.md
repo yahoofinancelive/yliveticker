@@ -1,24 +1,37 @@
-# Yahoo Finance → InfluxDB → Grafana
+# yliveticker → InfluxDB → Grafana
 
 This local quickstart runs three services: a `yliveticker` collector, InfluxDB 2,
 and Grafana with an automatically provisioned datasource and dashboard.
 Docker Engine/Desktop with the Compose v2 plugin and an internet connection are
 required; no host Python installation or manual datasource setup is needed.
 
-From the repository root:
+From the repository root, on the `feat/pooling-and-grafana` branch until
+[PR #22](https://github.com/yahoofinancelive/yliveticker/pull/22) merges:
 
 ```bash
-docker compose -f docker/docker-compose.yml up --build -d
+docker compose -f docker/docker-compose.yml up --build -d --wait --wait-timeout 180
 ```
 
-Open [the live dashboard](http://localhost:3000/d/yliveticker-dashboard).
-The first build downloads the images and Python dependencies. Once InfluxDB
-finishes initialization, the collector subscribes to `BTC-USD`, `ETH-USD` and
-`AAPL`. Allow a few seconds for the first ticks. Crypto usually updates outside
-stock-market hours. Yahoo's unofficial feed can be delayed or unavailable.
+**Default mode is synthetic demo data.** The collector emits `DEMO-BTC-USD`,
+`DEMO-ETH-USD` and `DEMO-AAPL` every second, writes them to **InfluxDB 2,
+bucket `ticker_data`**, and Grafana queries that bucket. `--wait` waits for recent
+ticks in storage and Grafana readiness; a timeout reports a startup failure.
+The first build downloads images and Python dependencies.
+
+Open **[Grafana at localhost:3000](http://localhost:3000)**. The ticker dashboard
+is the home page and appears under **Dashboards → yliveticker**. You can also use
+[its permanent URL](http://localhost:3000/d/yliveticker-dashboard).
+The top of the dashboard identifies the active feed, distinguishes synthetic
+prices from Yahoo quotes, and shows the stored tick count. The symbol selector
+uses the displayed time range; the feed status and tick count update even before
+symbol discovery completes.
+
+The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
+`TICKER_DEMO=1` has no effect there. Use the PR branch to try this quickstart.
 
 The dashboard provides:
 
+- Active feed and stored tick count, queried from InfluxDB.
 - Latest observed prices and the age of each symbol's last tick.
 - A symbol selector and separate price charts for each selected symbol.
 - **Cumulative session volume** (`dayVolume`), not interval/candle volume.
@@ -30,18 +43,19 @@ The dashboard provides:
 On macOS/Linux, from the repository root:
 
 ```bash
-TICKER_SYMBOLS="BTC-USD NVDA EURUSD=X" docker compose -f docker/docker-compose.yml up -d
+TICKER_DEMO=0 TICKER_SYMBOLS="BTC-USD NVDA EURUSD=X" docker compose -f docker/docker-compose.yml up -d
 ```
 
 On Windows or to keep the setting between runs, put this in `docker/.env`:
 
 ```dotenv
+TICKER_DEMO=0
 TICKER_SYMBOLS=BTC-USD NVDA EURUSD=X
 ```
 
 Then run the original Compose command again. Previously stored symbols remain
-available in the dashboard selector for one day; select just the symbols you
-want to view. Closed markets naturally show older ticks or no ticks in range.
+available when they have ticks in the selected time range; select just the symbols
+you want to view. Closed markets naturally show older ticks or no ticks in range.
 
 Live watchlists are deduplicated and pooled automatically, with at most 100
 symbols per Yahoo connection. The default limit is four connections (400 unique
@@ -51,19 +65,44 @@ collector accepts the same environment setting or `--max-connections 6`.
 The 100-symbol boundary was observed in live tests of Yahoo's unofficial feed;
 pooling cannot guarantee updates for an inactive instrument or closed market.
 
-## Demo mode (synthetic data)
+## Demo and live modes
 
-To check the pipeline without depending on Yahoo or market hours:
+The plain command defaults to demo. To explicitly request the same mode:
 
 ```bash
-TICKER_DEMO=1 docker compose -f docker/docker-compose.yml up --build -d
+TICKER_DEMO=1 docker compose -f docker/docker-compose.yml up --build -d --wait --wait-timeout 180
 ```
 
-Alternatively set `TICKER_DEMO=1` in `docker/.env`. The collector emits
-**synthetic** prices under `DEMO-*` symbols and logs a demo-mode warning. This
-uses the same sink, storage and dashboard as live mode. Set `TICKER_DEMO=0` and
-run Compose again to return to Yahoo. Stored demo series remain visible until
-they age out of the selected time range; select the live symbols explicitly.
+The collector logs **DEMO MODE** and emits synthetic prices under `DEMO-*`
+symbols. Both modes use the same InfluxDB sink and bucket. Grafana's volume
+stores dashboard settings; market ticks are stored in the InfluxDB volume.
+
+For live Yahoo data:
+
+```bash
+TICKER_DEMO=0 docker compose -f docker/docker-compose.yml up --build -d
+```
+
+Yahoo's unofficial feed can be delayed or unavailable. Crypto usually updates
+outside stock-market hours. The collector is healthy only while a configured
+symbol has a tick within the last 30 seconds; an unhealthy live collector can
+mean the upstream feed is silent, even if the process is running.
+
+Put `TICKER_DEMO=0` or `TICKER_DEMO=1` in `docker/.env` to keep your choice between
+commands. A prefix such as `TICKER_DEMO=0` applies to just that invocation;
+running a plain command afterwards uses `.env` or the default demo mode.
+Stored series remain visible within the selected time range. Select live or
+`DEMO-*` symbols explicitly when switching modes.
+
+## Upgrade an existing quickstart
+
+Pull the current PR branch and rerun `up --build -d --wait --wait-timeout 180`.
+Provisioning replaces the old Grafana `InfluxDB` datasource with a stable UID,
+updates the dashboard, and keeps stored InfluxDB ticks. This fixes the
+`Datasource provisioning error: data source not found` failure on existing
+Grafana databases. Dashboard files live under `/etc/grafana/dashboards` separately
+from Grafana's database and are polled every 30 seconds, including on macOS.
+**No volume deletion is required for this upgrade.**
 
 ## Logs, shutdown and data
 
@@ -83,8 +122,8 @@ docker compose -f docker/docker-compose.yml down -v
 
 SIGINT/SIGTERM stops the collector and flushes buffered ticks. The example uses
 one-second batches. Compose allows 30 seconds for pooled connections to close
-and the sink to flush before forcing termination. The existing sink logs write failures and does not replay
-failed batches; this demo is not a durable market-data queue.
+and the sink to flush before forcing termination. The existing sink logs write
+failures and does not replay failed batches; this demo is not a durable market-data queue.
 
 ## Local settings
 
@@ -135,7 +174,11 @@ queries the default `ticker_data` bucket.
 
 | Symptom | Check |
 | --- | --- |
-| Empty charts | Check collector logs, choose a crypto symbol, and allow a few seconds. Try demo mode to isolate Yahoo availability. |
+| Empty charts | Confirm this branch has a `collector` service: `docker compose -f docker/docker-compose.yml config --services`. Check `ps` and collector logs. Demo mode should show `DEMO-*` ticks; allow the first build to finish. |
+| Dashboard hard to find | Open `http://localhost:3000/d/yliveticker-dashboard` or **Dashboards → yliveticker**. Existing personal home preferences can override the configured home page. |
+| Internal Grafana datasource shown | Open the ticker dashboard; its data panels use `yliveticker-influxdb`. The older dashboard's built-in annotations used `-- Grafana --`; those annotations have been removed. |
+| Grafana exits with “data source not found” | Pull this branch and rebuild. Its provisioning migrates the earlier generated datasource UID. Keep your volumes. |
+| `--wait` times out | Inspect `ps`, `logs influxdb grafana collector`, and the collector health check below. Do not assume a running container has written data. |
 | Only old/demo symbols | Select the desired symbols, then refresh the dashboard or widen the time range. |
 | InfluxDB unhealthy / unauthorized | Check token consistency and whether an existing volume was initialized with different credentials. |
 | Port already in use | Stop the conflicting local service or change the host-side port in Compose. |
@@ -143,11 +186,14 @@ queries the default `ticker_data` bucket.
 
 ## Integration check
 
-CI starts the actual Compose stack with synthetic data and verifies InfluxDB
-writes, Grafana provisioning, symbol discovery and every dashboard panel query.
+CI seeds an older Grafana database, then starts the actual Compose stack with
+synthetic data and verifies the upgrade, recent InfluxDB writes, home page,
+project-name search, symbol discovery and every dashboard panel query. It also
+checks a fresh browser opened before the first tick arrives.
 To run the same check locally, after starting demo mode:
 
 ```bash
+docker compose -f docker/docker-compose.yml exec collector python examples/tsdb_example.py --check
 python tests/verify_grafana_integration.py
 ```
 
