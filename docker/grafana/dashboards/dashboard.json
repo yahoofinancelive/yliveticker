@@ -10,7 +10,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 10,
+  "version": 11,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
@@ -31,7 +31,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\nCharts use your browser timezone (`${__timezone}`); switch the time picker to UTC whenever preferred. Info bubbles identify exchange-local regular sessions. Empty price charts intentionally keep sleeping markets visible; unavailable volume charts are omitted. Holidays, special sessions, DST and Yahoo delays can change coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\nCharts use your browser timezone (`${__timezone}`); switch the time picker to UTC whenever preferred. Info bubbles give regular sessions directly in UTC, with both daylight- and standard-time hours where DST applies. Empty price charts intentionally keep sleeping markets visible; unavailable volume charts are omitted. Holidays, special sessions, DST and Yahoo delays can change coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },
@@ -258,65 +258,6 @@
       }
     },
     {
-      "id": 1,
-      "title": "Latest price",
-      "type": "stat",
-      "description": "Last observed price in the selected range, in each symbol’s quote currency.",
-      "datasource": {
-        "type": "influxdb",
-        "uid": "yliveticker-influxdb"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 16,
-        "x": 0,
-        "y": 15
-      },
-      "fieldConfig": {
-        "defaults": {
-          "displayName": "${__field.labels.id}",
-          "unit": "short",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "noValue": "Waiting for ticks"
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "yliveticker-influxdb"
-          },
-          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => r.id =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> last()"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "textMode": "value_and_name",
-        "colorMode": "value",
-        "graphMode": "none",
-        "orientation": "auto"
-      }
-    },
-    {
       "id": 2,
       "title": "Time since last tick",
       "type": "table",
@@ -326,9 +267,9 @@
         "uid": "yliveticker-influxdb"
       },
       "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
+        "h": 8,
+        "w": 24,
+        "x": 0,
         "y": 15
       },
       "fieldConfig": {
@@ -359,7 +300,7 @@
             "type": "influxdb",
             "uid": "yliveticker-influxdb"
           },
-          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => r.id =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> map(fn: (r) => ({Symbol: r.id, Age: float(v: uint(v: now()) - uint(v: r._time)) / 1000000000.0}))\n  |> group()\n  |> sort(columns: [\"Symbol\"])"
+          "query": "symbolLabel = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX\"\n  else if id == \"GC=F\" then \"GC=F · United States (COMEX)\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia\"\n  else if id == \"7203.T\" then \"7203.T · Japan\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai (UAE)\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom\"\n  else if id == \"AAPL\" then \"AAPL · United States\"\n  else if id == \"NVDA\" then \"NVDA · United States\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil\"\n  else id\n\nfrom(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => symbolLabel(id: r.id) =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> map(fn: (r) => ({Symbol: symbolLabel(id: r.id), Age: float(v: uint(v: now()) - uint(v: r._time)) / 1000000000.0}))\n  |> group()\n  |> sort(columns: [\"Symbol\"])"
         }
       ],
       "transformations": [
@@ -393,7 +334,7 @@
       "id": 3,
       "title": "${symbol:raw}: price",
       "type": "timeseries",
-      "description": "${symbol:text}. Session times are exchange-local; chart timestamps use `${__timezone}`. Last observed price per display window, in the instrument’s quote currency. This panel stays visible as No data when the market is closed or silent. Holidays, special sessions, DST and Yahoo delays can change observed coverage.",
+      "description": "${symbol:text}. Session hours above are UTC; chart timestamps use `${__timezone}`. Last observed price per display window, in the instrument’s quote currency. This panel stays visible as No data when the market is closed or silent. Holidays, special sessions, DST and Yahoo delays can change observed coverage.",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -402,7 +343,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 19
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -442,7 +383,7 @@
             "type": "influxdb",
             "uid": "yliveticker-influxdb"
           },
-          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => r.id =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
+          "query": "symbolLabel = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX\"\n  else if id == \"GC=F\" then \"GC=F · United States (COMEX)\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia\"\n  else if id == \"7203.T\" then \"7203.T · Japan\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai (UAE)\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom\"\n  else if id == \"AAPL\" then \"AAPL · United States\"\n  else if id == \"NVDA\" then \"NVDA · United States\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil\"\n  else id\n\nfrom(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => symbolLabel(id: r.id) =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
         }
       ],
       "repeat": "symbol",
@@ -464,7 +405,7 @@
       "id": 4,
       "title": "${volume_symbol:raw}: reported session volume (cumulative)",
       "type": "timeseries",
-      "description": "${volume_symbol:text}. Session times are exchange-local; chart timestamps use `${__timezone}`. Positive Yahoo dayVolume values as received. This is cumulative session volume, not per-candle or interval volume. Instruments without meaningful dayVolume are omitted rather than showing a misleading zero.",
+      "description": "${volume_symbol:text}. Session hours above are UTC; chart timestamps use `${__timezone}`. Positive Yahoo dayVolume values as received. This is cumulative session volume, not per-candle or interval volume. Instruments without meaningful dayVolume are omitted rather than showing a misleading zero.",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -473,7 +414,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -513,7 +454,7 @@
             "type": "influxdb",
             "uid": "yliveticker-influxdb"
           },
-          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => r.id =~ /^${volume_symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"volume\" and r._value > 0.0)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
+          "query": "symbolLabel = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX\"\n  else if id == \"GC=F\" then \"GC=F · United States (COMEX)\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia\"\n  else if id == \"7203.T\" then \"7203.T · Japan\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai (UAE)\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom\"\n  else if id == \"AAPL\" then \"AAPL · United States\"\n  else if id == \"NVDA\" then \"NVDA · United States\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil\"\n  else id\n\nfrom(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => symbolLabel(id: r.id) =~ /^${volume_symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"volume\" and r._value > 0.0)\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
         }
       ],
       "repeat": "volume_symbol",
@@ -559,7 +500,7 @@
           "type": "influxdb",
           "uid": "yliveticker-influxdb"
         },
-        "query": "import \"array\"\n\nmarketInfo = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global · Bitcoin · trades 24/7\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX · EUR/USD · 24 hours Sunday–Friday\"\n  else if id == \"GC=F\" then \"GC=F · COMEX · gold futures · Sun–Fri 17:00–16:00 CT; daily 16:00–17:00 break\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand (NZX) · Fisher & Paykel Healthcare · regular session 10:00–16:45 local time\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia (ASX) · BHP · regular session 10:00–16:00 local time\"\n  else if id == \"7203.T\" then \"7203.T · Japan (Tokyo) · Toyota · regular sessions 09:00–11:30 and 12:30–15:30 local time\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong · Tencent · regular sessions 09:30–12:00 and 13:00–16:00 local time\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore · DBS Group · regular sessions 09:00–12:00 and 13:00–17:00 local time\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India · Reliance Industries · regular session 09:15–15:30 local time\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai · Emaar Properties · regular session 10:00–15:00 local time\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa · Naspers · regular session 09:00–17:00 local time\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany (Xetra) · SAP · regular session 09:00–17:30 local time\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom (London) · HSBC · regular session 08:00–16:30 local time\"\n  else if id == \"AAPL\" then \"AAPL · United States (Nasdaq) · Apple · regular session 09:30–16:00 ET\"\n  else if id == \"NVDA\" then \"NVDA · United States (Nasdaq) · NVIDIA · regular session 09:30–16:00 ET\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada (Toronto) · Shopify · regular session 09:30–16:00 ET\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil (São Paulo) · Vale · regular session 10:00–17:00 BRT\"\n  else id + \" · Market and regular-session metadata unavailable\"\n\ndefaults = array.from(rows: [{_value: \"BTC-USD\"}, {_value: \"EURUSD=X\"}, {_value: \"GC=F\"}, {_value: \"FPH.NZ\"}, {_value: \"BHP.AX\"}, {_value: \"7203.T\"}, {_value: \"0700.HK\"}, {_value: \"D05.SI\"}, {_value: \"RELIANCE.NS\"}, {_value: \"EMAAR.AE\"}, {_value: \"NPN.JO\"}, {_value: \"SAP.DE\"}, {_value: \"HSBA.L\"}, {_value: \"AAPL\"}, {_value: \"NVDA\"}, {_value: \"SHOP.TO\"}, {_value: \"VALE3.SA\"}])\n\nobserved = from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()\n\nunion(tables: [defaults, observed])\n  |> group()\n  |> distinct()\n  |> map(fn: (r) => ({_value: r._value + \"|\" + marketInfo(id: r._value)}))",
+        "query": "import \"array\"\n\nsymbolLabel = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX\"\n  else if id == \"GC=F\" then \"GC=F · United States (COMEX)\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia\"\n  else if id == \"7203.T\" then \"7203.T · Japan\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai (UAE)\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom\"\n  else if id == \"AAPL\" then \"AAPL · United States\"\n  else if id == \"NVDA\" then \"NVDA · United States\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil\"\n  else id\n\nsessionInfo = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global · Bitcoin · trades 24/7 UTC\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX · EUR/USD · trades nearly 24 hours Sunday–Friday UTC; the weekly boundary shifts with US DST\"\n  else if id == \"GC=F\" then \"GC=F · United States (COMEX) · gold futures · UTC 22:00–21:00 during CDT / 23:00–22:00 during CST, with a one-hour daily break\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand (NZX) · Fisher & Paykel Healthcare · regular session UTC 21:00 (previous day)–03:45 during NZDT / 22:00 (previous day)–04:45 during NZST\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia (ASX) · BHP · regular session UTC 23:00 (previous day)–05:00 during AEDT / 00:00–06:00 during AEST\"\n  else if id == \"7203.T\" then \"7203.T · Japan (Tokyo) · Toyota · regular sessions UTC 00:00–02:30 and 03:30–06:30\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong · Tencent · regular sessions UTC 01:30–04:00 and 05:00–08:00\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore · DBS Group · regular sessions UTC 01:00–04:00 and 05:00–09:00\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India · Reliance Industries · regular session UTC 03:45–10:00\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai (UAE) · Emaar Properties · regular session UTC 06:00–11:00\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa · Naspers · regular session UTC 07:00–15:00\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany (Xetra) · SAP · regular session UTC 07:00–15:30 during CEST / 08:00–16:30 during CET\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom (London) · HSBC · regular session UTC 07:00–15:30 during BST / 08:00–16:30 during GMT\"\n  else if id == \"AAPL\" then \"AAPL · United States (Nasdaq) · Apple · regular session UTC 13:30–20:00 during EDT / 14:30–21:00 during EST\"\n  else if id == \"NVDA\" then \"NVDA · United States (Nasdaq) · NVIDIA · regular session UTC 13:30–20:00 during EDT / 14:30–21:00 during EST\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada (Toronto) · Shopify · regular session UTC 13:30–20:00 during EDT / 14:30–21:00 during EST\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil (São Paulo) · Vale · regular session UTC 13:00–20:00\"\n  else id + \" · Country, instrument and regular-session metadata unavailable\"\n\ndefaults = array.from(rows: [{_value: \"BTC-USD\"}, {_value: \"EURUSD=X\"}, {_value: \"GC=F\"}, {_value: \"FPH.NZ\"}, {_value: \"BHP.AX\"}, {_value: \"7203.T\"}, {_value: \"0700.HK\"}, {_value: \"D05.SI\"}, {_value: \"RELIANCE.NS\"}, {_value: \"EMAAR.AE\"}, {_value: \"NPN.JO\"}, {_value: \"SAP.DE\"}, {_value: \"HSBA.L\"}, {_value: \"AAPL\"}, {_value: \"NVDA\"}, {_value: \"SHOP.TO\"}, {_value: \"VALE3.SA\"}])\n\nobserved = from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()\n\nunion(tables: [defaults, observed])\n  |> group()\n  |> distinct()\n  |> map(fn: (r) => ({_value: symbolLabel(id: r._value) + \"|\" + sessionInfo(id: r._value)}))",
         "regex": "/(?<value>[^|]+)\\|(?<text>.*)/",
         "refresh": 2,
         "sort": 1,
@@ -582,7 +523,7 @@
           "type": "influxdb",
           "uid": "yliveticker-influxdb"
         },
-        "query": "marketInfo = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global · Bitcoin · trades 24/7\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX · EUR/USD · 24 hours Sunday–Friday\"\n  else if id == \"GC=F\" then \"GC=F · COMEX · gold futures · Sun–Fri 17:00–16:00 CT; daily 16:00–17:00 break\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand (NZX) · Fisher & Paykel Healthcare · regular session 10:00–16:45 local time\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia (ASX) · BHP · regular session 10:00–16:00 local time\"\n  else if id == \"7203.T\" then \"7203.T · Japan (Tokyo) · Toyota · regular sessions 09:00–11:30 and 12:30–15:30 local time\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong · Tencent · regular sessions 09:30–12:00 and 13:00–16:00 local time\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore · DBS Group · regular sessions 09:00–12:00 and 13:00–17:00 local time\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India · Reliance Industries · regular session 09:15–15:30 local time\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai · Emaar Properties · regular session 10:00–15:00 local time\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa · Naspers · regular session 09:00–17:00 local time\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany (Xetra) · SAP · regular session 09:00–17:30 local time\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom (London) · HSBC · regular session 08:00–16:30 local time\"\n  else if id == \"AAPL\" then \"AAPL · United States (Nasdaq) · Apple · regular session 09:30–16:00 ET\"\n  else if id == \"NVDA\" then \"NVDA · United States (Nasdaq) · NVIDIA · regular session 09:30–16:00 ET\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada (Toronto) · Shopify · regular session 09:30–16:00 ET\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil (São Paulo) · Vale · regular session 10:00–17:00 BRT\"\n  else id + \" · Market and regular-session metadata unavailable\"\n\nfrom(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"volume_available\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> filter(fn: (r) => r._value == 1)\n  |> map(fn: (r) => ({_value: r.id + \"|\" + marketInfo(id: r.id)}))\n  |> group()\n  |> distinct()",
+        "query": "symbolLabel = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX\"\n  else if id == \"GC=F\" then \"GC=F · United States (COMEX)\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia\"\n  else if id == \"7203.T\" then \"7203.T · Japan\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai (UAE)\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom\"\n  else if id == \"AAPL\" then \"AAPL · United States\"\n  else if id == \"NVDA\" then \"NVDA · United States\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil\"\n  else id\n\nsessionInfo = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global · Bitcoin · trades 24/7 UTC\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX · EUR/USD · trades nearly 24 hours Sunday–Friday UTC; the weekly boundary shifts with US DST\"\n  else if id == \"GC=F\" then \"GC=F · United States (COMEX) · gold futures · UTC 22:00–21:00 during CDT / 23:00–22:00 during CST, with a one-hour daily break\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand (NZX) · Fisher & Paykel Healthcare · regular session UTC 21:00 (previous day)–03:45 during NZDT / 22:00 (previous day)–04:45 during NZST\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia (ASX) · BHP · regular session UTC 23:00 (previous day)–05:00 during AEDT / 00:00–06:00 during AEST\"\n  else if id == \"7203.T\" then \"7203.T · Japan (Tokyo) · Toyota · regular sessions UTC 00:00–02:30 and 03:30–06:30\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong · Tencent · regular sessions UTC 01:30–04:00 and 05:00–08:00\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore · DBS Group · regular sessions UTC 01:00–04:00 and 05:00–09:00\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India · Reliance Industries · regular session UTC 03:45–10:00\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai (UAE) · Emaar Properties · regular session UTC 06:00–11:00\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa · Naspers · regular session UTC 07:00–15:00\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany (Xetra) · SAP · regular session UTC 07:00–15:30 during CEST / 08:00–16:30 during CET\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom (London) · HSBC · regular session UTC 07:00–15:30 during BST / 08:00–16:30 during GMT\"\n  else if id == \"AAPL\" then \"AAPL · United States (Nasdaq) · Apple · regular session UTC 13:30–20:00 during EDT / 14:30–21:00 during EST\"\n  else if id == \"NVDA\" then \"NVDA · United States (Nasdaq) · NVIDIA · regular session UTC 13:30–20:00 during EDT / 14:30–21:00 during EST\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada (Toronto) · Shopify · regular session UTC 13:30–20:00 during EDT / 14:30–21:00 during EST\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil (São Paulo) · Vale · regular session UTC 13:00–20:00\"\n  else id + \" · Country, instrument and regular-session metadata unavailable\"\n\nfrom(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"volume_available\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> filter(fn: (r) => r._value == 1)\n  |> map(fn: (r) => ({_value: symbolLabel(id: r.id) + \"|\" + sessionInfo(id: r.id)}))\n  |> group()\n  |> distinct()",
         "regex": "/(?<value>[^|]+)\\|(?<text>.*)/",
         "refresh": 2,
         "sort": 1,

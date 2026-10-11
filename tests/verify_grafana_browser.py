@@ -43,13 +43,15 @@ def main():
             page.mouse.wheel(0, 10000)
             page.wait_for_timeout(500)
             body = page.locator("body").inner_text()
-            assert "NVDA: price" in body and "No data" in body, body
+            assert "NVDA · United States: price" in body and "No data" in body, body
+            assert "Latest price" not in body, body
             nvda_panel = page.get_by_role("region").filter(
-                has=page.get_by_role("heading", name="NVDA: price"),
+                has=page.get_by_role("heading", name="NVDA · United States: price"),
             )
             nvda_panel.locator('[data-testid="icon-info-circle"]').hover()
             page.get_by_text(
-                "NVDA · United States (Nasdaq) · NVIDIA · regular session 09:30–16:00 ET.",
+                "NVDA · United States (Nasdaq) · NVIDIA · regular session UTC "
+                "13:30–20:00 during EDT / 14:30–21:00 during EST.",
                 exact=False,
             ).wait_for()
             page.mouse.wheel(0, -10000)
@@ -74,7 +76,7 @@ def main():
                 if ("Synthetic test feed" in body
                         and "SYNTH-BTC-USD: price" in body
                         and "SYNTH-BTC-USD: reported session volume (cumulative)" in body
-                        and "NVDA: price" in body
+                        and "NVDA · United States: price" in body
                         and "Received ticks/min (last 60s)" in body
                         and "Received ticks per minute" in body
                         and "No data" in body

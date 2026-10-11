@@ -28,9 +28,10 @@ is the home page and appears under **Dashboards → yliveticker**. You can also 
 The top of the dashboard identifies the active feed and distinguishes synthetic
 prices from Yahoo quotes. Chart timestamps default to the viewing browser's
 timezone; use Grafana's time picker to switch to UTC or another IANA timezone.
-Each price and available-volume chart's info bubble identifies its symbol,
-market, instrument and exchange-local regular session; `FPH.NZ` is explicitly
-identified as **New Zealand (NZX)**. The symbol selector always contains the
+Each price and available-volume chart title identifies its country, while its
+info bubble gives the instrument and regular session directly in UTC. Markets
+that observe DST show both UTC schedules; `FPH.NZ` is explicitly identified as
+**New Zealand (NZX)**. The symbol selector always contains the
 default watchlist and also discovers additional stored symbols from the
 displayed time range. The default range is one hour so delayed quotes—such as
 New Zealand—remain visible.
@@ -43,7 +44,7 @@ The dashboard provides:
 - Active feed and stored tick count, queried from InfluxDB.
 - A rolling received-ticks-per-minute value and one-minute bar chart. These use
   collector receipt time rather than Yahoo's potentially delayed event time.
-- Latest observed prices and a scrollable table of last-tick ages.
+- A full-width, scrollable table of last-tick ages.
 - A symbol selector and separate price charts for each selected symbol. Every
   default ticker gets a panel, so closed or silent markets show **No data**
   instead of disappearing.

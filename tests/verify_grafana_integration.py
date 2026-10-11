@@ -45,8 +45,12 @@ def verify_once():
     assert '{_value: "NVDA"}' in symbol_variable["query"]
     assert "NVDA · United States (Nasdaq)" in symbol_variable["query"]
     assert "FPH.NZ · New Zealand (NZX)" in symbol_variable["query"]
+    assert 'then "7203.T · Japan"' in symbol_variable["query"]
+    assert "regular sessions UTC 00:00–02:30 and 03:30–06:30" in symbol_variable["query"]
     assert symbol_variable["regex"] == volume_variable["regex"]
     assert "| Yahoo symbol | Market / instrument |" not in dashboard["panels"][0]["options"]["content"]
+    assert not any(panel.get("title") == "Latest price" for panel in dashboard["panels"])
+    assert not any(panel.get("id") == 1 for panel in dashboard["panels"])
     price_panel = next(panel for panel in dashboard["panels"] if panel["id"] == 3)
     volume_panel = next(panel for panel in dashboard["panels"] if panel["id"] == 4)
     age_panel = next(panel for panel in dashboard["panels"] if panel["id"] == 2)
@@ -55,6 +59,7 @@ def verify_once():
     assert price_panel["title"] == "${symbol:raw}: price"
     assert volume_panel["title"].startswith("${volume_symbol:raw}:")
     assert age_panel["type"] == "table"
+    assert age_panel["gridPos"] == {"h": 8, "w": 24, "x": 0, "y": 15}
     assert "sort(columns: [\"Symbol\"])" in age_panel["targets"][0]["query"]
     assert dashboard["annotations"]["list"] == [], "No internal Grafana datasource is needed"
     home = grafana_request("/api/dashboards/home")
