@@ -27,8 +27,9 @@ is the home page and appears under **Dashboards → yliveticker**. You can also 
 [its permanent URL](http://localhost:3000/d/yliveticker-dashboard).
 The top of the dashboard identifies the active feed, distinguishes synthetic
 prices from Yahoo quotes, and shows the stored tick count. The symbol selector
-uses the displayed time range; the feed status and tick count update even before
-symbol discovery completes.
+uses the displayed time range. The default is one hour so exchanges whose Yahoo
+quotes are delayed—such as New Zealand—remain discoverable. The feed status and
+tick count update even before symbol discovery completes.
 
 The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
 `TICKER_SYNTHETIC=1` has no effect there. Use the PR branch to try this quickstart.
@@ -68,7 +69,8 @@ Auckland westward, their regular sessions provide broad weekday coverage, but
 they are not a guaranteed continuous feed: holidays, closed markets and Yahoo
 availability still apply. A West Coast company still trades on the US market
 schedule. `BTC-USD` supplies true 24/7 ticks; FX and gold futures bridge most of
-the weekday gaps.
+the weekday gaps. Some exchanges are delayed by Yahoo, so their stored event
+timestamps can trail wall-clock time even while the market is open.
 
 On macOS/Linux, from the repository root:
 
@@ -204,6 +206,7 @@ queries the default `ticker_data` bucket.
 | Symptom | Check |
 | --- | --- |
 | Empty charts | Confirm this branch has a `collector` service: `docker compose -f docker/docker-compose.yml config --services`. Check `ps` and collector logs. The synthetic test feed should show `SYNTH-*` ticks; allow the first build to finish. |
+| Open market missing from Symbols | Widen the time range. Yahoo marks some exchanges as delayed; the one-hour dashboard default accommodates the typical delay, while a shorter custom range can hide those ticks. |
 | Dashboard hard to find | Open `http://localhost:3000/d/yliveticker-dashboard` or **Dashboards → yliveticker**. Existing personal home preferences can override the configured home page. |
 | Old Price/Volume page, `-- Grafana --`, or `e.replace is not a function` | Pull this branch and rerun `up --build -d`, then the readiness script. The upgrade replaces the legacy dashboard without requiring `down -v`. |
 | Grafana exits with “data source not found” | Pull this branch and rebuild. Its provisioning migrates the earlier generated datasource UID. Keep your volumes. |

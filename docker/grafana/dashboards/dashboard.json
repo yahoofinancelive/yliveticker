@@ -10,12 +10,12 @@
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 5,
+  "version": 6,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
   "time": {
-    "from": "now-15m",
+    "from": "now-1h",
     "to": "now"
   },
   "panels": [
@@ -31,7 +31,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.** `BTC-USD` · `EURUSD=X` · `GC=F` · `FPH.NZ` · `BHP.AX` · `7203.T` · `0700.HK` · `D05.SI` · `RELIANCE.NS` · `EMAAR.AE` · `NPN.JO` · `SAP.DE` · `HSBA.L` · `AAPL` · `NVDA` · `SHOP.TO` · `VALE3.SA`\n\nWeekday exchange handoff; BTC is 24/7. Closed markets populate next session. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.** `BTC-USD` · `EURUSD=X` · `GC=F` · `FPH.NZ` · `BHP.AX` · `7203.T` · `0700.HK` · `D05.SI` · `RELIANCE.NS` · `EMAAR.AE` · `NPN.JO` · `SAP.DE` · `HSBA.L` · `AAPL` · `NVDA` · `SHOP.TO` · `VALE3.SA`\n\nWeekday exchange handoff; BTC is 24/7. The one-hour default includes delayed exchange quotes. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },

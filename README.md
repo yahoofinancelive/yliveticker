@@ -58,7 +58,8 @@ market hours. Put `TICKER_SYNTHETIC=1` in `docker/.env` only for pipeline testin
 
 *The default quickstart connects to Yahoo. The exchange sequence gives broad
 weekday coverage, while BTC supplies true 24/7 ticks. Closed exchanges begin
-populating when their next trading sessions open.*
+populating when their next trading sessions open. The one-hour default dashboard
+range keeps delayed exchange quotes, including New Zealand, visible.*
 
 **[Quickstart settings, synthetic test feed and troubleshooting →](docker/README.md)**
 

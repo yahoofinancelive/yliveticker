@@ -37,6 +37,7 @@ def verify_once():
     assert dashboard["title"] == "yliveticker · Yahoo Finance", dashboard["title"]
     assert response["meta"]["provisioned"], "Ticker dashboard is not file-provisioned"
     assert dashboard["refresh"] == "5s"
+    assert dashboard["time"]["from"] == "now-1h", "Default range must include delayed exchanges"
     assert dashboard["templating"]["list"][0]["includeAll"]
     assert dashboard["annotations"]["list"] == [], "No internal Grafana datasource is needed"
     home = grafana_request("/api/dashboards/home")
