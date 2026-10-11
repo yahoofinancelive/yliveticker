@@ -10,7 +10,7 @@
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 8,
+  "version": 9,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
@@ -24,14 +24,14 @@
       "title": "Ticker dashboard · InfluxDB storage",
       "type": "text",
       "gridPos": {
-        "h": 20,
+        "h": 4,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "markdown",
-        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\n| Yahoo symbol | Market / instrument | Regular session (local market time) |\n| --- | --- | --- |\n| `BTC-USD` | Global · Bitcoin | 24/7 |\n| `EURUSD=X` | Global · EUR/USD | 24 hours, Sunday–Friday |\n| `GC=F` | COMEX · gold futures | Sun–Fri 17:00–16:00 CT; 16:00–17:00 break |\n| `FPH.NZ` | **New Zealand (NZX)** · Fisher & Paykel Healthcare | **10:00–16:45** |\n| `BHP.AX` | Australia (ASX) · BHP | 10:00–16:00 |\n| `7203.T` | Japan (Tokyo) · Toyota | 09:00–11:30; 12:30–15:30 |\n| `0700.HK` | Hong Kong · Tencent | 09:30–12:00; 13:00–16:00 |\n| `D05.SI` | Singapore · DBS Group | 09:00–12:00; 13:00–17:00 |\n| `RELIANCE.NS` | India · Reliance Industries | 09:15–15:30 |\n| `EMAAR.AE` | Dubai · Emaar Properties | 10:00–15:00 |\n| `NPN.JO` | South Africa · Naspers | 09:00–17:00 |\n| `SAP.DE` | Germany (Xetra) · SAP | 09:00–17:30 |\n| `HSBA.L` | United Kingdom (London) · HSBC | 08:00–16:30 |\n| `AAPL`, `NVDA` | United States (New York) · Apple, NVIDIA | 09:30–16:00 ET |\n| `SHOP.TO` | Canada (Toronto) · Shopify | 09:30–16:00 ET |\n| `VALE3.SA` | Brazil (São Paulo) · Vale | 10:00–17:00 BRT |\n\nEvery default watchlist symbol gets a price panel, including **No data** panels while its market sleeps. Unavailable volume panels remain omitted. Holidays, special sessions, DST and Yahoo delays can change observed coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\nMarket, instrument and regular local session are in each ticker chart’s **info bubble**. Empty price charts intentionally keep sleeping markets visible; unavailable volume charts are omitted. Holidays, special sessions, DST and Yahoo delays can change coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },
@@ -47,7 +47,7 @@
         "h": 4,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -111,7 +111,7 @@
         "h": 4,
         "w": 8,
         "x": 8,
-        "y": 20
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -160,7 +160,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -209,7 +209,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 8
       },
       "fieldConfig": {
         "defaults": {
@@ -270,7 +270,7 @@
         "h": 4,
         "w": 16,
         "x": 0,
-        "y": 31
+        "y": 15
       },
       "fieldConfig": {
         "defaults": {
@@ -329,7 +329,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 31
+        "y": 15
       },
       "fieldConfig": {
         "defaults": {
@@ -385,9 +385,9 @@
     },
     {
       "id": 3,
-      "title": "${symbol}: price",
+      "title": "${symbol:raw}: price",
       "type": "timeseries",
-      "description": "Last observed price per display window; panels repeat for the complete default watchlist so closed or silent markets remain visible as No data. The market-hours table identifies each symbol, including FPH.NZ as New Zealand (NZX).",
+      "description": "${symbol:text}. Last observed price per display window, in the instrument’s quote currency. This panel stays visible as No data when the market is closed or silent. Holidays, special sessions, DST and Yahoo delays can change observed coverage.",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -396,7 +396,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 35
+        "y": 19
       },
       "fieldConfig": {
         "defaults": {
@@ -456,9 +456,9 @@
     },
     {
       "id": 4,
-      "title": "${volume_symbol}: reported session volume (cumulative)",
+      "title": "${volume_symbol:raw}: reported session volume (cumulative)",
       "type": "timeseries",
-      "description": "Positive Yahoo dayVolume values as received. This is cumulative session volume, not per-candle or interval volume. Yahoo omits meaningful dayVolume for some instruments (commonly FX and some delayed quotes); their volume panels are omitted rather than showing a misleading zero.",
+      "description": "${volume_symbol:text}. Positive Yahoo dayVolume values as received. This is cumulative session volume, not per-candle or interval volume. Instruments without meaningful dayVolume are omitted rather than showing a misleading zero.",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -467,7 +467,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 43
+        "y": 27
       },
       "fieldConfig": {
         "defaults": {
@@ -553,7 +553,8 @@
           "type": "influxdb",
           "uid": "yliveticker-influxdb"
         },
-        "query": "import \"array\"\n\ndefaults = array.from(rows: [{_value: \"BTC-USD\"}, {_value: \"EURUSD=X\"}, {_value: \"GC=F\"}, {_value: \"FPH.NZ\"}, {_value: \"BHP.AX\"}, {_value: \"7203.T\"}, {_value: \"0700.HK\"}, {_value: \"D05.SI\"}, {_value: \"RELIANCE.NS\"}, {_value: \"EMAAR.AE\"}, {_value: \"NPN.JO\"}, {_value: \"SAP.DE\"}, {_value: \"HSBA.L\"}, {_value: \"AAPL\"}, {_value: \"NVDA\"}, {_value: \"SHOP.TO\"}, {_value: \"VALE3.SA\"}])\n\nobserved = from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()\n\nunion(tables: [defaults, observed])\n  |> group()\n  |> distinct(column: \"_value\")",
+        "query": "import \"array\"\n\nmarketInfo = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global · Bitcoin · trades 24/7\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX · EUR/USD · 24 hours Sunday–Friday\"\n  else if id == \"GC=F\" then \"GC=F · COMEX · gold futures · Sun–Fri 17:00–16:00 CT; daily 16:00–17:00 break\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand (NZX) · Fisher & Paykel Healthcare · regular session 10:00–16:45 local time\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia (ASX) · BHP · regular session 10:00–16:00 local time\"\n  else if id == \"7203.T\" then \"7203.T · Japan (Tokyo) · Toyota · regular sessions 09:00–11:30 and 12:30–15:30 local time\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong · Tencent · regular sessions 09:30–12:00 and 13:00–16:00 local time\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore · DBS Group · regular sessions 09:00–12:00 and 13:00–17:00 local time\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India · Reliance Industries · regular session 09:15–15:30 local time\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai · Emaar Properties · regular session 10:00–15:00 local time\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa · Naspers · regular session 09:00–17:00 local time\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany (Xetra) · SAP · regular session 09:00–17:30 local time\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom (London) · HSBC · regular session 08:00–16:30 local time\"\n  else if id == \"AAPL\" then \"AAPL · United States (Nasdaq) · Apple · regular session 09:30–16:00 ET\"\n  else if id == \"NVDA\" then \"NVDA · United States (Nasdaq) · NVIDIA · regular session 09:30–16:00 ET\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada (Toronto) · Shopify · regular session 09:30–16:00 ET\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil (São Paulo) · Vale · regular session 10:00–17:00 BRT\"\n  else id + \" · Market and regular-session metadata unavailable\"\n\ndefaults = array.from(rows: [{_value: \"BTC-USD\"}, {_value: \"EURUSD=X\"}, {_value: \"GC=F\"}, {_value: \"FPH.NZ\"}, {_value: \"BHP.AX\"}, {_value: \"7203.T\"}, {_value: \"0700.HK\"}, {_value: \"D05.SI\"}, {_value: \"RELIANCE.NS\"}, {_value: \"EMAAR.AE\"}, {_value: \"NPN.JO\"}, {_value: \"SAP.DE\"}, {_value: \"HSBA.L\"}, {_value: \"AAPL\"}, {_value: \"NVDA\"}, {_value: \"SHOP.TO\"}, {_value: \"VALE3.SA\"}])\n\nobserved = from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()\n\nunion(tables: [defaults, observed])\n  |> group()\n  |> distinct()\n  |> map(fn: (r) => ({_value: r._value + \"|\" + marketInfo(id: r._value)}))",
+        "regex": "/(?<value>[^|]+)\\|(?<text>.*)/",
         "refresh": 2,
         "sort": 1,
         "multi": true,
@@ -575,7 +576,8 @@
           "type": "influxdb",
           "uid": "yliveticker-influxdb"
         },
-        "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"volume_available\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> filter(fn: (r) => r._value == 1)\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()",
+        "query": "marketInfo = (id) =>\n  if id == \"BTC-USD\" then \"BTC-USD · Global · Bitcoin · trades 24/7\"\n  else if id == \"EURUSD=X\" then \"EURUSD=X · Global FX · EUR/USD · 24 hours Sunday–Friday\"\n  else if id == \"GC=F\" then \"GC=F · COMEX · gold futures · Sun–Fri 17:00–16:00 CT; daily 16:00–17:00 break\"\n  else if id == \"FPH.NZ\" then \"FPH.NZ · New Zealand (NZX) · Fisher & Paykel Healthcare · regular session 10:00–16:45 local time\"\n  else if id == \"BHP.AX\" then \"BHP.AX · Australia (ASX) · BHP · regular session 10:00–16:00 local time\"\n  else if id == \"7203.T\" then \"7203.T · Japan (Tokyo) · Toyota · regular sessions 09:00–11:30 and 12:30–15:30 local time\"\n  else if id == \"0700.HK\" then \"0700.HK · Hong Kong · Tencent · regular sessions 09:30–12:00 and 13:00–16:00 local time\"\n  else if id == \"D05.SI\" then \"D05.SI · Singapore · DBS Group · regular sessions 09:00–12:00 and 13:00–17:00 local time\"\n  else if id == \"RELIANCE.NS\" then \"RELIANCE.NS · India · Reliance Industries · regular session 09:15–15:30 local time\"\n  else if id == \"EMAAR.AE\" then \"EMAAR.AE · Dubai · Emaar Properties · regular session 10:00–15:00 local time\"\n  else if id == \"NPN.JO\" then \"NPN.JO · South Africa · Naspers · regular session 09:00–17:00 local time\"\n  else if id == \"SAP.DE\" then \"SAP.DE · Germany (Xetra) · SAP · regular session 09:00–17:30 local time\"\n  else if id == \"HSBA.L\" then \"HSBA.L · United Kingdom (London) · HSBC · regular session 08:00–16:30 local time\"\n  else if id == \"AAPL\" then \"AAPL · United States (Nasdaq) · Apple · regular session 09:30–16:00 ET\"\n  else if id == \"NVDA\" then \"NVDA · United States (Nasdaq) · NVIDIA · regular session 09:30–16:00 ET\"\n  else if id == \"SHOP.TO\" then \"SHOP.TO · Canada (Toronto) · Shopify · regular session 09:30–16:00 ET\"\n  else if id == \"VALE3.SA\" then \"VALE3.SA · Brazil (São Paulo) · Vale · regular session 10:00–17:00 BRT\"\n  else id + \" · Market and regular-session metadata unavailable\"\n\nfrom(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"volume_available\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> filter(fn: (r) => r._value == 1)\n  |> map(fn: (r) => ({_value: r.id + \"|\" + marketInfo(id: r.id)}))\n  |> group()\n  |> distinct()",
+        "regex": "/(?<value>[^|]+)\\|(?<text>.*)/",
         "refresh": 2,
         "sort": 1,
         "multi": true,

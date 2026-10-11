@@ -39,8 +39,19 @@ def verify_once():
     assert dashboard["refresh"] == "5s"
     assert dashboard["time"]["from"] == "now-1h", "Default range must include delayed exchanges"
     assert dashboard["templating"]["list"][0]["includeAll"]
-    assert '{_value: "NVDA"}' in dashboard["templating"]["list"][0]["query"]
-    assert "| Yahoo symbol | Market / instrument |" in dashboard["panels"][0]["options"]["content"]
+    symbol_variable = dashboard["templating"]["list"][0]
+    volume_variable = dashboard["templating"]["list"][1]
+    assert '{_value: "NVDA"}' in symbol_variable["query"]
+    assert "NVDA · United States (Nasdaq)" in symbol_variable["query"]
+    assert "FPH.NZ · New Zealand (NZX)" in symbol_variable["query"]
+    assert symbol_variable["regex"] == volume_variable["regex"]
+    assert "| Yahoo symbol | Market / instrument |" not in dashboard["panels"][0]["options"]["content"]
+    price_panel = next(panel for panel in dashboard["panels"] if panel["id"] == 3)
+    volume_panel = next(panel for panel in dashboard["panels"] if panel["id"] == 4)
+    assert "${symbol:text}" in price_panel["description"]
+    assert "${volume_symbol:text}" in volume_panel["description"]
+    assert price_panel["title"] == "${symbol:raw}: price"
+    assert volume_panel["title"].startswith("${volume_symbol:raw}:")
     assert dashboard["annotations"]["list"] == [], "No internal Grafana datasource is needed"
     home = grafana_request("/api/dashboards/home")
     assert (home.get("dashboard", {}).get("uid") == dashboard["uid"]

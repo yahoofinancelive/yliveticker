@@ -25,12 +25,13 @@ The first build downloads images and Python dependencies.
 Open **[Grafana at localhost:3000](http://localhost:3000)**. The ticker dashboard
 is the home page and appears under **Dashboards → yliveticker**. You can also use
 [its permanent URL](http://localhost:3000/d/yliveticker-dashboard).
-The top of the dashboard identifies the active feed, distinguishes synthetic
-prices from Yahoo quotes, and presents every default symbol, market and regular
-local trading session in a table. It explicitly identifies `FPH.NZ` as **New
-Zealand (NZX)**. The symbol selector always contains the default watchlist and
-also discovers additional stored symbols from the displayed time range. The
-default range is one hour so delayed quotes—such as New Zealand—remain visible.
+The top of the dashboard identifies the active feed and distinguishes synthetic
+prices from Yahoo quotes. Each price and available-volume chart's info bubble
+identifies its symbol, market, instrument and regular local trading session;
+`FPH.NZ` is explicitly identified as **New Zealand (NZX)**. The symbol selector
+always contains the default watchlist and also discovers additional stored
+symbols from the displayed time range. The default range is one hour so delayed
+quotes—such as New Zealand—remain visible.
 
 The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
 `TICKER_SYNTHETIC=1` has no effect there. Use the PR branch to try this quickstart.

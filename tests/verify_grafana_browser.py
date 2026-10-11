@@ -44,6 +44,14 @@ def main():
             page.wait_for_timeout(500)
             body = page.locator("body").inner_text()
             assert "NVDA: price" in body and "No data" in body, body
+            nvda_panel = page.get_by_role("region").filter(
+                has=page.get_by_role("heading", name="NVDA: price"),
+            )
+            nvda_panel.locator('[data-testid="icon-info-circle"]').hover()
+            page.get_by_text(
+                "NVDA · United States (Nasdaq) · NVIDIA · regular session 09:30–16:00 ET.",
+                exact=False,
+            ).wait_for()
             page.mouse.wheel(0, -10000)
             pages.append(page)
         print("PASS: home page and direct dashboard opened before the first tick", flush=True)
