@@ -38,6 +38,13 @@ def main():
             page.get_by_text("Stored ticks (selected range)", exact=True).wait_for()
             body = page.locator("body").inner_text()
             assert "Waiting for ticks" in body, "This test must open before the first collector tick"
+            # Grafana lazily renders repeated panels. Scroll once to prove that a
+            # configured sleeping ticker exists as an intentional empty chart.
+            page.mouse.wheel(0, 10000)
+            page.wait_for_timeout(500)
+            body = page.locator("body").inner_text()
+            assert "NVDA: price" in body and "No data" in body, body
+            page.mouse.wheel(0, -10000)
             pages.append(page)
         print("PASS: home page and direct dashboard opened before the first tick", flush=True)
 
@@ -50,18 +57,26 @@ def main():
 
         for page in pages:
             # Stay on the same page: no reload, variable selection or manual refresh.
+            # Scroll to materialize all lazy repeated panels as their variables update.
             deadline = time.monotonic() + 90
             while True:
+                page.mouse.wheel(0, 10000)
+                page.wait_for_timeout(250)
                 body = page.locator("body").inner_text()
                 if ("Synthetic test feed" in body
                         and "SYNTH-BTC-USD: price" in body
                         and "SYNTH-BTC-USD: reported session volume (cumulative)" in body
-                        and "No data" not in body and "Waiting for ticks" not in body):
+                        and "NVDA: price" in body
+                        and "Received ticks/min (last 60s)" in body
+                        and "Received ticks per minute" in body
+                        and "No data" in body
+                        and "Waiting for ticks" not in body):
                     break
                 if time.monotonic() >= deadline:
                     raise AssertionError("Dashboard did not populate automatically:\n" + body)
                 page.wait_for_timeout(1000)
-            print("PASS: InfluxDB synthetic test data populated automatically:", page.url, flush=True)
+            print("PASS: data populated and sleeping default symbols stayed visible:",
+                  page.url, flush=True)
 
         assert queries, "Browser did not issue datasource queries"
         assert all(query.get("datasource", {}).get("uid") == "yliveticker-influxdb"

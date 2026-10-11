@@ -39,6 +39,8 @@ def verify_once():
     assert dashboard["refresh"] == "5s"
     assert dashboard["time"]["from"] == "now-1h", "Default range must include delayed exchanges"
     assert dashboard["templating"]["list"][0]["includeAll"]
+    assert '{_value: "NVDA"}' in dashboard["templating"]["list"][0]["query"]
+    assert "| Yahoo symbol | Market / instrument |" in dashboard["panels"][0]["options"]["content"]
     assert dashboard["annotations"]["list"] == [], "No internal Grafana datasource is needed"
     home = grafana_request("/api/dashboards/home")
     assert (home.get("dashboard", {}).get("uid") == dashboard["uid"]
@@ -79,6 +81,9 @@ def verify_once():
         elif title == "Stored ticks (selected range)":
             assert any(value > 0 for frame in frames for column in frame["data"]["values"]
                        for value in column if isinstance(value, (int, float)))
+        elif title in ("Received ticks/min (last 60s)", "Received ticks per minute"):
+            assert any(value > 0 for frame in frames for column in frame["data"]["values"]
+                       for value in column if isinstance(value, (int, float))), (title, frames)
         else:
             fields = [field for frame in frames for field in frame["schema"]["fields"]
                       if field["type"] == "number"]

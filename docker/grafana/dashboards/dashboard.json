@@ -10,7 +10,7 @@
   ],
   "timezone": "utc",
   "schemaVersion": 39,
-  "version": 7,
+  "version": 8,
   "editable": true,
   "refresh": "5s",
   "graphTooltip": 1,
@@ -24,14 +24,14 @@
       "title": "Ticker dashboard · InfluxDB storage",
       "type": "text",
       "gridPos": {
-        "h": 10,
+        "h": 20,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "markdown",
-        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\n**Regular sessions · local market time · weekdays unless noted:**\n- **Always / near-continuous:** `BTC-USD` crypto 24/7 · `EURUSD=X` global FX 24h Sun–Fri · `GC=F` gold futures Sun–Fri 17:00–16:00 CT (16:00–17:00 break)\n- **Asia-Pacific:** `FPH.NZ` **New Zealand (NZX) 10:00–16:45** · `BHP.AX` Sydney 10:00–16:00 · `7203.T` Tokyo 09:00–11:30 / 12:30–15:30 · `0700.HK` Hong Kong 09:30–12:00 / 13:00–16:00 · `D05.SI` Singapore 09:00–12:00 / 13:00–17:00\n- **India → Europe:** `RELIANCE.NS` India 09:15–15:30 · `EMAAR.AE` Dubai 10:00–15:00 · `NPN.JO` Johannesburg 09:00–17:00 · `SAP.DE` Xetra 09:00–17:30 · `HSBA.L` London 08:00–16:30\n- **Americas:** `AAPL` / `NVDA` New York 09:30–16:00 ET · `SHOP.TO` Toronto 09:30–16:00 ET · `VALE3.SA` São Paulo 10:00–17:00 BRT\n\nPrice panels appear only after a tick exists in the selected range; unticked symbols are omitted rather than drawn empty. Unavailable volume panels are omitted entirely. Holidays, special sessions, DST and Yahoo delays can change observed coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\n| Yahoo symbol | Market / instrument | Regular session (local market time) |\n| --- | --- | --- |\n| `BTC-USD` | Global · Bitcoin | 24/7 |\n| `EURUSD=X` | Global · EUR/USD | 24 hours, Sunday–Friday |\n| `GC=F` | COMEX · gold futures | Sun–Fri 17:00–16:00 CT; 16:00–17:00 break |\n| `FPH.NZ` | **New Zealand (NZX)** · Fisher & Paykel Healthcare | **10:00–16:45** |\n| `BHP.AX` | Australia (ASX) · BHP | 10:00–16:00 |\n| `7203.T` | Japan (Tokyo) · Toyota | 09:00–11:30; 12:30–15:30 |\n| `0700.HK` | Hong Kong · Tencent | 09:30–12:00; 13:00–16:00 |\n| `D05.SI` | Singapore · DBS Group | 09:00–12:00; 13:00–17:00 |\n| `RELIANCE.NS` | India · Reliance Industries | 09:15–15:30 |\n| `EMAAR.AE` | Dubai · Emaar Properties | 10:00–15:00 |\n| `NPN.JO` | South Africa · Naspers | 09:00–17:00 |\n| `SAP.DE` | Germany (Xetra) · SAP | 09:00–17:30 |\n| `HSBA.L` | United Kingdom (London) · HSBC | 08:00–16:30 |\n| `AAPL`, `NVDA` | United States (New York) · Apple, NVIDIA | 09:30–16:00 ET |\n| `SHOP.TO` | Canada (Toronto) · Shopify | 09:30–16:00 ET |\n| `VALE3.SA` | Brazil (São Paulo) · Vale | 10:00–17:00 BRT |\n\nEvery default watchlist symbol gets a price panel, including **No data** panels while its market sleeps. Unavailable volume panels remain omitted. Holidays, special sessions, DST and Yahoo delays can change observed coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
       },
       "links": []
     },
@@ -45,9 +45,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
+        "w": 8,
         "x": 0,
-        "y": 10
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -109,9 +109,9 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
-        "x": 12,
-        "y": 10
+        "w": 8,
+        "x": 8,
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -148,6 +148,116 @@
       ]
     },
     {
+      "id": 8,
+      "title": "Received ticks/min (last 60s)",
+      "description": "Ticks received by the collector during the latest rolling 60 seconds. This uses local receipt time, not Yahoo's possibly delayed market-event timestamp.",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"ticker_ingest\" and r._field == \"count\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _time: now(), _field: \"received_ticks_per_minute\"}))"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Received ticks per minute",
+      "description": "One-minute ingestion counts using collector receipt time. Empty minutes are shown as zero; Yahoo event timestamps may be older for delayed exchanges.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "ticks/min",
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 0,
+            "fillOpacity": 85,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker_ingest\" and r._field == \"count\")\n  |> group()\n  |> aggregateWindow(every: 1m, fn: count, createEmpty: true)\n  |> fill(value: 0)"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
       "id": 1,
       "title": "Latest price",
       "type": "stat",
@@ -160,7 +270,7 @@
         "h": 4,
         "w": 16,
         "x": 0,
-        "y": 14
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -219,7 +329,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 14
+        "y": 31
       },
       "fieldConfig": {
         "defaults": {
@@ -277,7 +387,7 @@
       "id": 3,
       "title": "${symbol}: price",
       "type": "timeseries",
-      "description": "Last observed price per display window; panels repeat per selected symbol to keep independent price scales. The market-hours guide above identifies each symbol, including FPH.NZ as New Zealand (NZX).",
+      "description": "Last observed price per display window; panels repeat for the complete default watchlist so closed or silent markets remain visible as No data. The market-hours table identifies each symbol, including FPH.NZ as New Zealand (NZX).",
       "datasource": {
         "type": "influxdb",
         "uid": "yliveticker-influxdb"
@@ -286,7 +396,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 18
+        "y": 35
       },
       "fieldConfig": {
         "defaults": {
@@ -357,7 +467,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 26
+        "y": 43
       },
       "fieldConfig": {
         "defaults": {
@@ -443,7 +553,7 @@
           "type": "influxdb",
           "uid": "yliveticker-influxdb"
         },
-        "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()",
+        "query": "import \"array\"\n\ndefaults = array.from(rows: [{_value: \"BTC-USD\"}, {_value: \"EURUSD=X\"}, {_value: \"GC=F\"}, {_value: \"FPH.NZ\"}, {_value: \"BHP.AX\"}, {_value: \"7203.T\"}, {_value: \"0700.HK\"}, {_value: \"D05.SI\"}, {_value: \"RELIANCE.NS\"}, {_value: \"EMAAR.AE\"}, {_value: \"NPN.JO\"}, {_value: \"SAP.DE\"}, {_value: \"HSBA.L\"}, {_value: \"AAPL\"}, {_value: \"NVDA\"}, {_value: \"SHOP.TO\"}, {_value: \"VALE3.SA\"}])\n\nobserved = from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> map(fn: (r) => ({_value: r.id}))\n  |> group()\n  |> distinct()\n\nunion(tables: [defaults, observed])\n  |> group()\n  |> distinct(column: \"_value\")",
         "refresh": 2,
         "sort": 1,
         "multi": true,

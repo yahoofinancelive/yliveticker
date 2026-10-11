@@ -26,12 +26,11 @@ Open **[Grafana at localhost:3000](http://localhost:3000)**. The ticker dashboar
 is the home page and appears under **Dashboards → yliveticker**. You can also use
 [its permanent URL](http://localhost:3000/d/yliveticker-dashboard).
 The top of the dashboard identifies the active feed, distinguishes synthetic
-prices from Yahoo quotes, maps every default symbol to its market and regular
-local trading hours, and shows the stored tick count. It explicitly identifies
-`FPH.NZ` as **New Zealand (NZX)**. The symbol selector uses the displayed time
-range. The default is one hour so exchanges whose Yahoo quotes are delayed—such
-as New Zealand—remain discoverable. The feed status and tick count update even
-before symbol discovery completes.
+prices from Yahoo quotes, and presents every default symbol, market and regular
+local trading session in a table. It explicitly identifies `FPH.NZ` as **New
+Zealand (NZX)**. The symbol selector always contains the default watchlist and
+also discovers additional stored symbols from the displayed time range. The
+default range is one hour so delayed quotes—such as New Zealand—remain visible.
 
 The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
 `TICKER_SYNTHETIC=1` has no effect there. Use the PR branch to try this quickstart.
@@ -39,8 +38,12 @@ The older `main` Compose file starts only InfluxDB and Grafana, not a collector;
 The dashboard provides:
 
 - Active feed and stored tick count, queried from InfluxDB.
+- A rolling received-ticks-per-minute value and one-minute bar chart. These use
+  collector receipt time rather than Yahoo's potentially delayed event time.
 - Latest observed prices and the age of each symbol's last tick.
-- A symbol selector and separate price charts for each selected symbol.
+- A symbol selector and separate price charts for each selected symbol. Every
+  default ticker gets a panel, so closed or silent markets show **No data**
+  instead of disappearing.
 - Positive **cumulative session volume** (`dayVolume`), not interval/candle
   volume. Yahoo's missing/unsupported volume arrives as zero for some assets;
   the quickstart treats it as unavailable and omits those volume panels.
@@ -92,12 +95,11 @@ On Windows or to keep the setting between runs, put this in `docker/.env`:
 TICKER_SYMBOLS=BTC-USD NVDA EURUSD=X
 ```
 
-Then run the original Compose command again. Previously stored symbols remain
-available when they have ticks in the selected time range; select just the symbols
-you want to view. Grafana builds the selector and repeated panels from symbols
-with a stored price in that range, so a symbol with no tick is omitted instead of
-rendered as an empty chart. Closed markets naturally show older ticks or no ticks
-in range.
+Then run the original Compose command again. Every symbol in the built-in default
+watchlist remains available even without a tick in the selected range; additional
+previously stored symbols are discovered from that range. Select just the symbols
+you want to view. Closed markets naturally show older ticks or an empty **No data**
+price chart.
 
 Live watchlists are deduplicated and pooled automatically, with at most 100
 symbols per Yahoo connection. The default limit is four connections (400 unique
@@ -216,8 +218,9 @@ queries the default `ticker_data` bucket.
 
 | Symptom | Check |
 | --- | --- |
-| Empty charts | Confirm this branch has a `collector` service: `docker compose -f docker/docker-compose.yml config --services`. Check `ps` and collector logs. The synthetic test feed should show `SYNTH-*` ticks; allow the first build to finish. |
-| Open market missing from Symbols | Widen the time range. Yahoo marks some exchanges as delayed; the one-hour dashboard default accommodates the typical delay, while a shorter custom range can hide those ticks. |
+| Empty price chart | This is expected for a configured ticker with no quote in the selected range, including a sleeping/closed market. Check market hours, widen the range, then inspect collector logs if an open market remains silent. |
+| Additional custom symbol missing from Symbols | Widen the time range. The default watchlist is always present, while non-default symbols are discovered from stored price ticks in the displayed range. |
+| Tick-rate chart is empty after upgrade | The `ticker_ingest` receipt-time series starts when the upgraded collector starts; it is not reconstructed from older, potentially delayed event timestamps. |
 | Volume panel is missing | Yahoo does not provide meaningful `dayVolume` for every instrument (commonly FX and some delayed quotes). Zero is treated as unavailable, so the dashboard omits that volume panel rather than implying zero trading. |
 | Dashboard hard to find | Open `http://localhost:3000/d/yliveticker-dashboard` or **Dashboards → yliveticker**. Existing personal home preferences can override the configured home page. |
 | Old Price/Volume page, `-- Grafana --`, or `e.replace is not a function` | Pull this branch and rerun `up --build -d`, then the readiness script. The upgrade replaces the legacy dashboard without requiring `down -v`. |

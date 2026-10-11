@@ -18,7 +18,8 @@ class TestInfluxDBSink(unittest.TestCase):
             'id': 'AAPL',
             'price': 150.0,
             'dayVolume': 1000000,
-            'timestamp': 1600000000000 # 2020-09-13 12:26:40 UTC
+            'timestamp': 1600000000000, # 2020-09-13 12:26:40 UTC
+            '_received_at_ns': 1600000000123456789,
         }
         
         # Test write_batch
@@ -30,9 +31,9 @@ class TestInfluxDBSink(unittest.TestCase):
         # Extract the point sent to write
         args, kwargs = mock_write_api.write.call_args
         sent_points = kwargs['record']
-        self.assertEqual(len(sent_points), 1)
+        self.assertEqual(len(sent_points), 2)
         
-        point = sent_points[0]
+        point = next(point for point in sent_points if point._name == "ticker")
         self.assertEqual(point._name, "ticker")
         self.assertEqual(point._tags['id'], "AAPL")
         self.assertEqual(point._fields['price'], 150.0)
@@ -42,6 +43,11 @@ class TestInfluxDBSink(unittest.TestCase):
         # Verify timestamp (2020-09-13 12:26:40 UTC)
         expected_dt = datetime.fromtimestamp(1600000000, tz=timezone.utc)
         self.assertEqual(point._time, expected_dt)
+
+        received = next(point for point in sent_points if point._name == "ticker_ingest")
+        self.assertEqual(received._tags['id'], "AAPL")
+        self.assertEqual(received._fields['count'], 1)
+        self.assertEqual(received._time, 1600000000123456789)
 
     @patch('influxdb_client.InfluxDBClient')
     def test_zero_volume_is_treated_as_unavailable(self, MockClient):
@@ -53,9 +59,12 @@ class TestInfluxDBSink(unittest.TestCase):
             'price': 1.16,
             'dayVolume': 0,
             'timestamp': 1600000000000,
+            '_received_at_ns': 1600000000123456789,
         }])
 
-        point = mock_write_api.write.call_args.kwargs['record'][0]
+        points = mock_write_api.write.call_args.kwargs['record']
+        self.assertEqual(len(points), 2)
+        point = next(point for point in points if point._name == "ticker")
         self.assertEqual(point._fields['price'], 1.16)
         self.assertEqual(point._fields['volume_available'], 0)
         self.assertNotIn('volume', point._fields)
