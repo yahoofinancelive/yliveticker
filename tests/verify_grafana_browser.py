@@ -46,6 +46,10 @@ def main():
             body = page.locator("body").inner_text()
             assert "SYNTH-NVDA · Synthetic test · United States: price" in body and "No data" in body, body
             assert "Latest price" not in body, body
+            titles = page.get_by_role("heading").all_text_contents()
+            prices = [title for title in titles if title.endswith(": price")]
+            assert prices[:2] == ["SYNTH-FPH.NZ · Synthetic test · New Zealand: price",
+                                  "SYNTH-D05.SI · Synthetic test · Singapore: price"], prices
             nvda_panel = page.get_by_role("region").filter(
                 has=page.get_by_role("heading", name="SYNTH-NVDA · Synthetic test · United States: price"),
             )
@@ -56,7 +60,7 @@ def main():
             ).wait_for()
             page.mouse.wheel(0, -10000)
             pages.append(page)
-        print("PASS: home page and direct dashboard opened before the first tick", flush=True)
+        print("PASS: empty charts keep Asia-Pacific first, before US and global assets", flush=True)
 
         if args.start_collector:
             subprocess.run([
@@ -101,9 +105,10 @@ def main():
             )
             expected_state = ("Receiving delayed quotes" if float(os.getenv(
                 "TICKER_SYNTHETIC_DELAY_SECONDS", "0")) > 60 else "Receiving")
-            age_panel.get_by_role("gridcell", name=expected_state, exact=True).wait_for()
+            age_panel.get_by_role("gridcell", name=expected_state, exact=True).first.wait_for()
             age_table = age_panel.inner_text()
-            assert all(value in age_table for value in ("Symbol", "Receipt age", "Quote age", "SYNTH-BTC-USD", "SYNTH-NVDA")), age_table
+            assert all(value in age_table for value in ("Symbol", "Receipt age", "Newest quote age", "Session",
+                "Regular schedule", "Received since restart", "Written since restart", "SYNTH-BTC-USD", "SYNTH-NVDA")), age_table
             if float(os.getenv("TICKER_SYNTHETIC_DELAY_SECONDS", "0")) > 60:
                 assert "Receiving delayed quotes" in age_table, age_table
             print("PASS: data populated and sleeping default symbols stayed visible:",

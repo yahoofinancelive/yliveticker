@@ -6,7 +6,7 @@ import threading
 import time
 from pathlib import Path
 
-from .observability import symbol_status
+from .observability import new_observation, record_observation, symbol_status
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class CollectorMonitor:
         self.metrics_path = Path(metrics_path) if metrics_path else None
         self.client = None
         self.started_at = time.monotonic()
-        self._observations = {s: {} for s in self.symbols}
+        self._observations = {s: new_observation() for s in self.symbols}
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, name="yliveticker-monitor", daemon=True)
@@ -29,11 +29,7 @@ class CollectorMonitor:
         msg.setdefault("_received_at_ns", time.time_ns())
         with self._lock:
             if msg["id"] in self._observations:
-                old = self._observations[msg["id"]]
-                self._observations[msg["id"]] = dict(
-                    received_count=old.get("received_count", 0) + 1,
-                    last_received_time=msg["_received_at_ns"] / 1e9,
-                    last_quote_time=msg["timestamp"] / 1000)
+                record_observation(self._observations[msg["id"]], msg, msg["_received_at_ns"] / 1e9)
         self.sink.on_ticker(ws, msg)
 
     def snapshot(self):

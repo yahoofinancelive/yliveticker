@@ -26,8 +26,10 @@ feed, complete market coverage, or a replacement for historical-data tooling.
   accepted/written/pending/rejected records and storage failures. Counters describe
   this process, not all upstream trades. Drivers differ in acknowledgement semantics
   (QuestDB TCP flush, for example, is not proof of durable server persistence).
-- The dashboard separates receipt age from Yahoo quote age. Estimated regular
-  hours exclude holidays and exceptional sessions. Silence means unknown—not
+- The dashboard separates receipt age from the newest observed Yahoo quote age,
+  preserves freshness across older snapshots, and labels quote sessions and counters
+  since restart. JPX cash-market holidays are covered for 2026; other regular-hour
+  estimates do not account for holidays or exceptional sessions. Silence means unknown—not
   necessarily closed, unsupported, or disconnected. Old heartbeats become unknown.
 - pandas retains at most 100,000 points by default. `session_volume` is the last
   reported cumulative value, never represented as interval traded volume.

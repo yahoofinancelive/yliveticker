@@ -17,8 +17,8 @@ jobs:
     env:
       TICKER_SYNTHETIC: '1'
       # Keep deterministic CI small; the product default remains the global live watchlist.
-      TICKER_SYMBOLS: BTC-USD NVDA
-      TICKER_SYNTHETIC_SILENT: NVDA
+      TICKER_SYMBOLS: BTC-USD NVDA FPH.NZ D05.SI
+      TICKER_SYNTHETIC_SILENT: NVDA FPH.NZ
       TICKER_SYNTHETIC_DELAY_SECONDS: '1200'
       COMPOSE_PROJECT_NAME: yliveticker-smoke
     steps:
@@ -49,6 +49,11 @@ jobs:
         run: python3 tests/verify_grafana_browser.py --start-collector
       - name: Verify writes, provisioning, symbol discovery and panel queries
         run: python3 tests/verify_grafana_integration.py
+      - name: Verify out-of-order overnight quotes in the actual table
+        run: |
+          docker compose -f docker/docker-compose.yml stop collector
+          python3 -m pip install -e '.[influxdb]'
+          python3 tests/verify_grafana_observations.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:

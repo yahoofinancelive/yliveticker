@@ -8,6 +8,7 @@ import time
 import websocket
 
 from .logger import writeline
+from .observability import new_observation, record_observation
 from .yaticker_pb2 import yaticker
 from .timeseries import YTimeSeries  # noqa: F401
 
@@ -113,7 +114,7 @@ class YLiveTicker:
 
     @staticmethod
     def _new_symbol_stats():
-        return dict(received_count=0, last_received_time=None, last_quote_time=None)
+        return new_observation()
 
     def _new_socket(self):
         return websocket.WebSocketApp(
@@ -253,9 +254,7 @@ class YLiveTicker:
         with self._lock:
             if data["id"] in self._symbol_stats:
                 symbol = self._symbol_stats[data["id"]]
-                symbol["received_count"] += 1
-                symbol["last_received_time"] = received_ns / 1e9
-                symbol["last_quote_time"] = data["timestamp"] / 1000
+                record_observation(symbol, data, received_ns / 1e9)
         if self._include_receipt_time:
             data["_received_at_ns"] = received_ns
         self._enqueue("tick", ws, data)

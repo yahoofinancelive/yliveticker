@@ -1,12 +1,14 @@
-"""Display metadata and approximate regular schedules, not exchange calendars.
+"""Display metadata, approximate schedules and explicitly limited holiday data.
 
-Yahoo support, holidays, auctions and exceptional sessions are not inferred from
-this registry. Unknown symbols remain usable with explicitly unknown metadata.
+Yahoo support, auctions and exceptional sessions are not inferred from this
+registry. Unknown symbols remain usable with explicitly unknown metadata.
 """
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+
+from .market_calendars import market_holiday
 
 
 @dataclass(frozen=True)
@@ -23,9 +25,28 @@ class Instrument:
     def label(self):
         return self.symbol + " · " + self.country
 
+    @property
+    def region(self):
+        if self.kind in ("crypto", "fx"):
+            return "Global"
+        if self.timezone.startswith(("Pacific/", "Australia/")) or self.timezone in (
+                "Asia/Tokyo", "Asia/Hong_Kong", "Asia/Singapore", "Asia/Kolkata"):
+            return "Asia-Pacific"
+        if self.timezone.startswith(("Europe/", "Africa/")) or self.timezone == "Asia/Dubai":
+            return "Europe / Middle East / Africa"
+        if self.timezone.startswith("America/"):
+            return "Americas"
+        return "Unknown region"
+
+    def holiday(self, now=None):
+        local = (now or datetime.now(timezone.utc)).astimezone(ZoneInfo(self.timezone))
+        return market_holiday(self.timezone, local.date(), self.kind)
+
     def expected_open(self, now=None):
         """Approximation only; None means no known schedule, not unsupported."""
         now = (now or datetime.now(timezone.utc)).astimezone(ZoneInfo(self.timezone))
+        if self.holiday(now):
+            return False
         minute = now.hour * 60 + now.minute
         day = now.weekday()
         if self.kind == "crypto":
@@ -67,8 +88,11 @@ class Instrument:
         return "Weekday regular sessions: " + hours
 
     def description(self):
+        extended = (" Yahoo can also send US pre-market, post-market and overnight quotes; "
+                    "the table identifies the newest quote's reported session."
+                    if self.timezone == "America/New_York" and self.kind == "equity" else "")
         return (self.label + " · " + self.name + " · quote currency " + self.currency + ". " +
-                self.utc_hours() + ". Indicative regular schedule only; holidays, special sessions, "
+                self.utc_hours() + "." + extended + " Indicative regular schedule only; holidays, special sessions, "
                 "Yahoo delays and feed availability may differ. No data does not prove a market is closed "
                 "or that Yahoo supports this symbol.")
 
@@ -99,6 +123,14 @@ INSTRUMENTS = (
 )
 REGISTRY = {instrument.symbol: instrument for instrument in INSTRUMENTS}
 DEFAULT_SYMBOLS = tuple(REGISTRY)
+
+
+def dashboard_symbols(symbols):
+    """Regions east to west; preserve registry order within each region."""
+    regions = ("Asia-Pacific", "Europe / Middle East / Africa", "Americas", "Global", "Unknown region")
+    positions = {symbol: n for n, symbol in enumerate(DEFAULT_SYMBOLS)}
+    return sorted(watchlist(symbols), key=lambda s: (
+        regions.index(instrument(s).region), positions.get(s.removeprefix("SYNTH-"), len(positions))))
 
 
 def instrument(symbol):

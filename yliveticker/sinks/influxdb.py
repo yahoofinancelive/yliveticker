@@ -29,6 +29,8 @@ class InfluxDBSink(BaseTSDBSink):
             point.field("price", float(msg.get('price'))).time(
                 datetime.fromtimestamp(msg.get('timestamp') / 1000, tz=timezone.utc)
             )
+            if msg.get("marketHours") is not None:
+                point.field("market_hours", int(msg["marketHours"]))
             # proto3 scalar fields have no presence information here, so Yahoo's
             # missing dayVolume arrives as 0. Preserve availability explicitly
             # without storing that sentinel as a measured session volume.
@@ -58,6 +60,8 @@ class InfluxDBSink(BaseTSDBSink):
         for status in statuses:
             point = influxdb_client.Point("ticker_status").tag("id", status["symbol"])
             for field in ("state", "connection", "received", "written"):
+                point.field(field, status[field])
+            for field in ("session", "schedule"):
                 point.field(field, status[field])
             for field in ("receipt_age", "quote_age"):
                 point.field(field, float(status[field]) if status[field] is not None else -1.0)

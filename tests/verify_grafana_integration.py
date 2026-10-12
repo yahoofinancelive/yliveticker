@@ -66,7 +66,7 @@ def verify_once():
     )
     assert age_panel["type"] == "table"
     assert age_panel["gridPos"] == {"h": 8, "w": 24, "x": 0, "y": 15}
-    assert "sort(columns: [\"Symbol\"])" in age_panel["targets"][0]["query"]
+    assert "sort(columns: [\"_order\"])" in age_panel["targets"][0]["query"]
     assert dashboard["annotations"]["list"] == [], "No internal Grafana datasource is needed"
     home = grafana_request("/api/dashboards/home")
     assert (home.get("dashboard", {}).get("uid") == dashboard["uid"]

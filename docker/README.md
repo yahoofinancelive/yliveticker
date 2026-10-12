@@ -46,12 +46,18 @@ The dashboard provides:
 - Active feed and stored tick count, queried from InfluxDB.
 - A rolling received-ticks-per-minute value and one-minute bar chart. These use
   collector receipt time rather than Yahoo's potentially delayed event time.
-- A full-width, scrollable per-symbol table: receipt age, quote age, received/written
-  counts, connection state and observational status. Old heartbeats become unknown.
+- A full-width, scrollable per-symbol table: receipt age, **newest quote age**,
+  Yahoo-reported session, regular schedule, connection state and observational status.
+  Freshness uses the greatest quote timestamp seen since restart, so a later-arriving
+  old snapshot cannot replace a newer quote. **Received/Written since restart** count
+  messages in the current collector run, not unique trades or points in the selected
+  chart range. Charts retain historical data across restarts. Old heartbeats become unknown.
 - A symbol selector and separate price charts for each selected symbol. Every
   configured ticker gets a panel, so closed or silent markets show **No data**
   instead of disappearing. Price and volume legends append the instrument's
   Yahoo quote-currency code (for example, `AAPL · USD` and `7203.T · JPY`).
+  Tables and charts are ordered Asia-Pacific first, then Europe/Middle East/Africa,
+  the Americas, and global assets; silent symbols keep their place.
 - Positive **cumulative session volume** (`dayVolume`), not interval/candle
   volume. Yahoo's missing/unsupported volume arrives as zero for some assets;
   the quickstart treats it as unavailable and omits those volume panels.
@@ -92,6 +98,14 @@ weekday sessions. None of this promises that Yahoo will send updates. Some excha
 timestamps can trail wall-clock time even while the market is open. The table
 shows regular full-day sessions; holidays, special/half-day sessions and daylight
 saving changes can alter them.
+
+The status table recognizes [JPX cash-market holidays for 2026](https://www.jpx.co.jp/english/corporate/about-jpx/calendar/index.html),
+including Sports Day on October 12. Other markets and years still use estimated
+weekday schedules; they are not covered by this holiday calendar.
+US quotes can arrive outside regular hours: Yahoo also distributes overnight prices
+through [Blue Ocean](https://unified.www.yahooinc.com/press/yahoo-finance-expands-global-coverage-with-new-uk-based-programming-and-24-5-market-data).
+The table labels the newest quote's reported session, including observed Yahoo code
+`4` as overnight. An unreported/zero session is not asserted to be pre-market.
 
 On macOS/Linux, from the repository root:
 

@@ -232,6 +232,24 @@ def test_diagnostics_are_copies():
     assert pool.diagnostics["connections"][0]["symbols"] == ["AMZN"]
 
 
+def test_out_of_order_session_snapshot_keeps_newest_quote_in_pool():
+    received = []
+    pool = client(ticker_names=["AAPL"], on_ticker=lambda ws, data: received.append(data))
+
+    def emit(socket):
+        for stamp, session in ((1791790800000, 4), (1791576000000, 1)):
+            message = yaticker(id="AAPL", price=337, time=stamp, marketHours=session)
+            socket.callbacks["on_message"](socket, base64.b64encode(message.SerializeToString()).decode())
+    pool.ws.behavior = emit
+    pool.run()
+    observation = pool.diagnostics["symbols"]["AAPL"]
+    assert observation["last_quote_time"] == 1791790800
+    assert observation["last_message_quote_time"] == 1791576000
+    assert observation["quote_market_hours"] == 4
+    assert observation["older_quote_count"] == 1
+    assert observation["received_count"] == len(received) == 2
+
+
 def test_cli_can_close_client_while_run_is_blocking():
     dashboard = Dashboard(["BTC-USD"])
     original = Socket.run_forever

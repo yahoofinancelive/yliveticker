@@ -2,6 +2,10 @@
 
 ## 0.5.6 (prepared for release)
 
+- Keep quote freshness and session metadata tied to the newest Yahoo timestamp,
+  even when older session snapshots arrive later. Identify overnight quotes, label
+  message counts since restart, order dashboard symbols by region with Asia-Pacific
+  first, and recognize verified JPX cash-market holidays for 2026.
 - Automatically distribute watchlists across Yahoo WebSocket connections, with
   no more than 100 unique symbols per socket and four sockets by default.
   Deduplicate symbols in order and reject oversized watchlists before connecting;
