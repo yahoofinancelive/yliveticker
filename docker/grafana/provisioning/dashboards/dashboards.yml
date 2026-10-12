@@ -1,11 +1,16 @@
 apiVersion: 1
 
 providers:
-  - name: 'Default'
+  # Grafana uses this internal name to associate files with rows in its
+  # database. Keep the original provider identity so existing quickstarts can
+  # replace the old two-panel dashboard instead of stranding it.
+  - name: Default
     orgId: 1
-    folder: ''
+    folder: yliveticker
     type: file
     disableDeletion: false
-    editable: true
+    editable: false
+    # Polling works across Docker Desktop bind mounts, including on macOS.
+    updateIntervalSeconds: 30
     options:
-      path: /var/lib/grafana/dashboards
+      path: /etc/grafana/dashboards

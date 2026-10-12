@@ -1,7 +1,15 @@
 apiVersion: 1
 
+# Older quickstarts let Grafana generate the UID. Updating that entry's UID
+# fails on Grafana 12; recreate the owned datasource before provisioning it.
+# This changes Grafana configuration only, never the InfluxDB bucket or ticks.
+deleteDatasources:
+  - name: InfluxDB
+    orgId: 1
+
 datasources:
   - name: InfluxDB
+    uid: yliveticker-influxdb
     type: influxdb
     access: proxy
     url: http://influxdb:8086
@@ -9,7 +17,7 @@ datasources:
       version: Flux
       organization: yliveticker
       defaultBucket: ticker_data
-      tlsSkipVerify: true
     secureJsonData:
-      token: my-super-secret-auth-token
-    editable: true
+      token: $INFLUX_TOKEN
+    isDefault: true
+    editable: false

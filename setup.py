@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="yliveticker",
-    version="0.5.5",
+    version="0.5.6",
     author="Alex Paramonov",
     author_email="yliveticker@gmail.com",
     description="Live market data from Yahoo! Finance websocket",
@@ -18,7 +18,8 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=['protobuf>=3.11.0', 'websocket-client>=0.57.0'],
+    install_requires=['protobuf>=3.20.3,<8', 'websocket-client>=1.6.0', 'tzdata'],
+    package_data={'yliveticker': ['dashboard_template.json', 'yaticker.proto']},
     extras_require={
         'pandas': ['pandas'],
         'cli': ['rich', 'prompt_toolkit'],
@@ -37,5 +38,5 @@ setuptools.setup(
             'yliveticker=yliveticker.cli:main',
         ],
     },
-    python_requires='!=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*'
+    python_requires='>=3.10'
 )

@@ -25,9 +25,10 @@ def test_get_ohlcv_real_pandas():
     # We expect one row per unique second in our data
     assert not df.empty
     # The first row at base_time should have price 100
-    row0 = df.loc[pd.to_datetime(base_time, unit='ms')]
+    row0 = df.loc[pd.to_datetime(base_time, unit='ms', utc=True)]
     assert row0['open'] == 100
     assert row0['high'] == 100
     assert row0['low'] == 100
     assert row0['close'] == 100
-    assert row0['volume'] == 1000
+    assert row0['session_volume'] == 1000
+    assert 'volume' not in df

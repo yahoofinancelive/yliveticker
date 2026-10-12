@@ -1,0 +1,17 @@
+name: Manual live observation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  observe:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      # Not a required merge check: upstream silence is not a deterministic test failure.
+      - run: python examples/live_canary.py --seconds 30

@@ -1,0 +1,69 @@
+name: Grafana quickstart
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    env:
+      TICKER_SYNTHETIC: '1'
+      # Keep deterministic CI small; the product default remains the global live watchlist.
+      TICKER_SYMBOLS: BTC-USD NVDA FPH.NZ D05.SI
+      TICKER_SYNTHETIC_SILENT: NVDA FPH.NZ
+      TICKER_SYNTHETIC_DELAY_SECONDS: '1200'
+      COMPOSE_PROJECT_NAME: yliveticker-smoke
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: docker compose -f docker/docker-compose.yml config --quiet
+      - name: Seed the exact legacy provisioned dashboard and datasource
+        run: |
+          docker compose -f docker/docker-compose.yml up -d influxdb
+          sh docker/wait-for-stack.sh influxdb
+          docker compose -f docker/docker-compose.yml run -d --no-deps --service-ports \
+            --name legacy-grafana \
+            -v "$PWD/tests/fixtures/grafana-legacy/provisioning:/etc/grafana/provisioning:ro" \
+            -v "$PWD/tests/fixtures/grafana-legacy/dashboards:/var/lib/grafana/dashboards:ro" \
+            -e GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/dashboard.json \
+            grafana
+          python3 tests/verify_grafana_integration.py --verify-legacy
+          docker rm -f legacy-grafana
+      - name: Start the database and dashboard before the collector
+        run: |
+          docker compose -f docker/docker-compose.yml up --build -d influxdb grafana
+          sh docker/wait-for-stack.sh influxdb grafana
+      - name: Install browser test dependencies
+        run: |
+          python3 -m pip install playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Open the empty dashboard, start collector and verify automatic rendering
+        run: python3 tests/verify_grafana_browser.py --start-collector
+      - name: Verify writes, provisioning, symbol discovery and panel queries
+        run: python3 tests/verify_grafana_integration.py
+      - name: Verify out-of-order overnight quotes in the actual table
+        run: |
+          docker compose -f docker/docker-compose.yml stop collector
+          python3 -m pip install -e '.[influxdb]'
+          python3 tests/verify_grafana_observations.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: grafana-dashboard
+          path: junit/grafana-dashboard.png
+      - name: Show service logs
+        if: always()
+        run: docker compose -f docker/docker-compose.yml logs --no-color
+      - name: Stop stack and remove test volumes
+        if: always()
+        run: |
+          docker rm -f legacy-grafana 2>/dev/null || true
+          docker compose -f docker/docker-compose.yml down -v
