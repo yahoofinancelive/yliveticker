@@ -108,7 +108,14 @@ def main():
             age_panel.get_by_role("gridcell", name=expected_state, exact=True).first.wait_for()
             age_table = age_panel.inner_text()
             assert all(value in age_table for value in ("Symbol", "Receipt age", "Newest quote age", "Session",
-                "Regular schedule", "Received since restart", "Written since restart", "SYNTH-BTC-USD", "SYNTH-NVDA")), age_table
+                "Regular schedule", "SYNTH-BTC-USD", "SYNTH-NVDA")), age_table
+            # Grafana virtualizes columns outside the scrollable viewport.
+            # Exercise horizontal scrolling rather than assuming a wide monitor.
+            grid = age_panel.get_by_role("grid")
+            grid.evaluate("el => { el.scrollLeft = el.scrollWidth; }")
+            age_panel.get_by_role("columnheader", name="Written since restart", exact=True).wait_for()
+            assert "Received since restart" in age_panel.inner_text()
+            grid.evaluate("el => { el.scrollLeft = 0; }")
             if float(os.getenv("TICKER_SYNTHETIC_DELAY_SECONDS", "0")) > 60:
                 assert "Receiving delayed quotes" in age_table, age_table
             print("PASS: data populated and sleeping default symbols stayed visible:",
