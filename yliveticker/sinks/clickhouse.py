@@ -3,11 +3,17 @@ import clickhouse_connect
 from datetime import datetime, timezone
 
 class ClickHouseSink(BaseTSDBSink):
-    def __init__(self, host='localhost', port=8123, username='default', password='', database='default', table_name='tickers', batch_size=100, flush_interval=5.0):
-        super().__init__(batch_size=batch_size, flush_interval=flush_interval)
-        self.client = clickhouse_connect.get_client(host=host, port=port, username=username, password=password, database=database)
+    def __init__(self, host='localhost', port=8123, username='default', password='', database='default', table_name='tickers', batch_size=100, flush_interval=5.0, **sink_options):
+        if not table_name.isidentifier():
+            raise ValueError("table_name must be a simple SQL identifier")
+        self.client = clickhouse_connect.get_client(host=host, port=port, username=username, password=password, database=database, connect_timeout=5, send_receive_timeout=5)
         self.table_name = table_name
-        self._create_table()
+        try:
+            self._create_table()
+        except Exception:
+            self.client.close()
+            raise
+        super().__init__(batch_size=batch_size, flush_interval=flush_interval, **sink_options)
 
     def _create_table(self):
         self.client.command(f"""
@@ -29,5 +35,7 @@ class ClickHouseSink(BaseTSDBSink):
         self.client.insert(self.table_name, data, column_names=['time', 'symbol', 'price', 'volume'])
 
     def stop(self):
-        super().stop()
-        self.client.close()
+        try:
+            super().stop()
+        finally:
+            self.client.close()

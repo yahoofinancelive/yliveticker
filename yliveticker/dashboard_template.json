@@ -1,0 +1,542 @@
+{
+  "id": null,
+  "uid": "yliveticker-dashboard",
+  "title": "yliveticker · Yahoo Finance",
+  "description": "Live Yahoo Finance ticks from an east-to-west global watchlist are stored in InfluxDB 2 (ticker_data). SYNTH-* prices appear only in the explicit synthetic test feed.",
+  "tags": [
+    "yliveticker",
+    "yahoo-finance",
+    "market-data"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 13,
+  "editable": true,
+  "refresh": "5s",
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 5,
+      "title": "Ticker dashboard · InfluxDB storage",
+      "type": "text",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Live Yahoo Finance feed · east-to-west watchlist · [InfluxDB](http://localhost:8086) bucket `ticker_data`.**\n\nCharts use your browser timezone (`${__timezone}`); switch the time picker to UTC whenever preferred. Info bubbles give regular sessions directly in UTC, with both daylight- and standard-time hours where DST applies. Empty price charts intentionally keep sleeping markets visible; unavailable volume charts are omitted. Holidays, special sessions, DST and Yahoo delays can change coverage. `SYNTH-*` is CI-only. [Details](https://github.com/yahoofinancelive/yliveticker/blob/feat/pooling-and-grafana/docker/README.md)."
+      },
+      "links": []
+    },
+    {
+      "id": 6,
+      "title": "Active feed (last 30 seconds)",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Waiting for ticks",
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Live Yahoo",
+                  "color": "green",
+                  "index": 1
+                },
+                "1": {
+                  "text": "Synthetic test feed",
+                  "color": "orange",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: -30s)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> group()\n  |> sort(columns: [\"_time\"], desc: true)\n  |> limit(n: 1)\n  |> map(fn: (r) => ({r with _value: if r.id =~ /^SYNTH-/ then 1 else 0}))"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Stored ticks (selected range)",
+      "description": "Price records read from InfluxDB; count excludes volume fields. Zero means no ticks have reached storage in this time range.",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\" and r._field == \"price\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _time: now(), _field: \"stored_ticks\"}))"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Received ticks/min (last 60s)",
+      "description": "Ticks received by the collector during the latest rolling 60 seconds. This uses local receipt time, not Yahoo's possibly delayed market-event timestamp.",
+      "type": "stat",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "0",
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: -1m)\n  |> filter(fn: (r) => r._measurement == \"ticker_ingest\" and r._field == \"count\")\n  |> group()\n  |> count()\n  |> map(fn: (r) => ({r with _time: now(), _field: \"received_ticks_per_minute\"}))"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Received ticks per minute",
+      "description": "One-minute ingestion counts using collector receipt time. Empty minutes are shown as zero; Yahoo event timestamps may be older for delayed exchanges.",
+      "type": "timeseries",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "ticks/min",
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 0,
+            "fillOpacity": 85,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker_ingest\" and r._field == \"count\")\n  |> group()\n  |> aggregateWindow(every: 1m, fn: count, createEmpty: true)\n  |> fill(value: 0)"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Time since last tick",
+      "type": "table",
+      "description": "Scrollable age table for the latest Yahoo timestamp per observed symbol in the selected range. Closed markets naturally become stale; symbols without a tick in range have no row.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Age"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => symbolLabel(id: r.id) =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> group(columns: [\"id\"])\n  |> last()\n  |> map(fn: (r) => ({Symbol: symbolLabel(id: r.id), Age: float(v: uint(v: now()) - uint(v: r._time)) / 1000000000.0}))\n  |> group()\n  |> sort(columns: [\"Symbol\"])"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "Symbol": 0,
+              "Age": 1
+            },
+            "renameByName": {}
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "${symbol:raw}: price",
+      "type": "timeseries",
+      "description": "${symbol:text}. Session hours above are UTC; chart timestamps use `${__timezone}`. Last observed price per display window, in the instrument’s quote currency. This panel stays visible as No data when the market is closed or silent. Holidays, special sessions, DST and Yahoo delays can change observed coverage.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 23
+      },
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "${__field.labels.id} · ${__field.labels.currency}",
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => symbolLabel(id: r.id) =~ /^${symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"price\")\n  |> map(fn: (r) => ({r with currency: currencyLabel(r: r)}))\n  |> group(columns: [\"id\", \"currency\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
+        }
+      ],
+      "repeat": "symbol",
+      "repeatDirection": "h",
+      "maxPerRow": 3,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "${volume_symbol:raw}: reported session volume (cumulative)",
+      "type": "timeseries",
+      "description": "${volume_symbol:text}. Session hours above are UTC; chart timestamps use `${__timezone}`. Positive Yahoo dayVolume values as received. This is cumulative session volume, not per-candle or interval volume. Instruments without meaningful dayVolume are omitted rather than showing a misleading zero.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "yliveticker-influxdb"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 31
+      },
+      "fieldConfig": {
+        "defaults": {
+          "displayName": "${__field.labels.id} · ${__field.labels.currency}",
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "yliveticker-influxdb"
+          },
+          "query": "from(bucket: \"ticker_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ticker\")\n  |> filter(fn: (r) => symbolLabel(id: r.id) =~ /^${volume_symbol:regex}$/)\n  |> filter(fn: (r) => r._field == \"volume\" and r._value > 0.0)\n  |> map(fn: (r) => ({r with currency: currencyLabel(r: r)}))\n  |> group(columns: [\"id\", \"currency\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)"
+        }
+      ],
+      "repeat": "volume_symbol",
+      "repeatDirection": "h",
+      "maxPerRow": 3,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "title": "Ticker dashboard",
+      "type": "link",
+      "url": "/d/yliveticker-dashboard",
+      "targetBlank": false
+    },
+    {
+      "title": "InfluxDB storage",
+      "type": "link",
+      "url": "http://localhost:8086",
+      "targetBlank": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "symbol",
+        "label": "Symbols",
+        "type": "query",
+        "datasource": {
+          "type": "influxdb",
+          "uid": "yliveticker-influxdb"
+        },
+        "query": "",
+        "regex": "/(?<value>[^|]+)\\|(?<text>.*)/",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "volume_symbol",
+        "label": "Volume symbols",
+        "type": "query",
+        "hide": 2,
+        "datasource": {
+          "type": "influxdb",
+          "uid": "yliveticker-influxdb"
+        },
+        "query": "",
+        "regex": "/(?<value>[^|]+)\\|(?<text>.*)/",
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
+  }
+}

@@ -7,11 +7,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 class TimescaleDBSink(BaseTSDBSink):
-    def __init__(self, dsn, table_name="tickers", batch_size=100, flush_interval=5.0):
-        super().__init__(batch_size=batch_size, flush_interval=flush_interval)
-        self.conn = psycopg2.connect(dsn)
+    def __init__(self, dsn, table_name="tickers", batch_size=100, flush_interval=5.0, **sink_options):
+        if not table_name.isidentifier():
+            raise ValueError("table_name must be a simple SQL identifier")
+        self.dsn = dsn
+        self.conn = self._connect()
         self.table_name = table_name
-        self._create_table()
+        try:
+            self._create_table()
+        except Exception:
+            self.conn.close()
+            raise
+        super().__init__(batch_size=batch_size, flush_interval=flush_interval, **sink_options)
+
+    def _connect(self):
+        return psycopg2.connect(self.dsn, connect_timeout=5, options="-c statement_timeout=5000")
 
     def _create_table(self):
         try:
@@ -49,10 +59,21 @@ class TimescaleDBSink(BaseTSDBSink):
             dt = datetime.fromtimestamp(msg.get('timestamp') / 1000, tz=timezone.utc)
             values.append((dt, msg.get('id'), float(msg.get('price')), float(msg.get('dayVolume'))))
         
-        with self.conn.cursor() as cur:
-            execute_values(cur, f"INSERT INTO {self.table_name} (time, symbol, price, volume) VALUES %s", values)
-            self.conn.commit()
+        if self.conn.closed:
+            self.conn = self._connect()
+        try:
+            with self.conn.cursor() as cur:
+                execute_values(cur, f"INSERT INTO {self.table_name} (time, symbol, price, volume) VALUES %s", values)
+                self.conn.commit()
+        except Exception:
+            try:
+                self.conn.rollback()
+            except psycopg2.Error:
+                self.conn.close()
+            raise
 
     def stop(self):
-        super().stop()
-        self.conn.close()
+        try:
+            super().stop()
+        finally:
+            self.conn.close()

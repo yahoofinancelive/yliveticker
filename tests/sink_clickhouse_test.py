@@ -11,6 +11,7 @@ class TestClickHouseSink(unittest.TestCase):
         mock_get_client.return_value = mock_client
         
         sink = ClickHouseSink(host='localhost', table_name='test_tickers')
+        self.addCleanup(sink.stop)
         
         # Verify table creation call
         self.assertTrue(mock_client.command.called)

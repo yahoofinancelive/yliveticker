@@ -22,7 +22,7 @@ def test_on_message():
                 "priceHint": 2,
             } == msg
 
-        yticker = YLiveTicker(on_ticker=on_msg)
+        yticker = YLiveTicker(on_ticker=on_msg, start=False)
         yticker.on_message(
             None,
             "CgRNU0ZUFYVrMUMY0KLMjcNcKgNOTVMwCDgBRZ"
